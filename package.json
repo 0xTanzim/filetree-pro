@@ -1,7 +1,7 @@
 {
-  "name": "filetreeproai",
-  "displayName": "FileTreeProAI",
-  "description": "Premium smart file tree generator for VS Code & Cursor with AI-powered insights",
+  "name": "filetree-pro",
+  "displayName": "FileTree Pro",
+  "description": "A powerful file tree generator for VS Code and Cursor. Generate beautiful file trees in multiple formats with smart exclusions and custom configurations.",
   "version": "0.1.0",
   "publisher": "filetreeproai",
   "engines": {
@@ -19,9 +19,17 @@
     "file-tree",
     "project-explorer",
     "file-visualization",
-    "ai",
-    "copilot",
-    "productivity"
+    "productivity",
+    "file tree",
+    "project explorer",
+    "folder graph",
+    "visual map",
+    "structure viewer",
+    "file tree",
+    "project explorer",
+    "folder graph",
+    "visual map",
+    "structure viewer"
   ],
   "galleryBanner": {
     "color": "#1E1E1E",
@@ -31,42 +39,42 @@
   "contributes": {
     "commands": [
       {
-        "command": "filetreeproai.refresh",
+        "command": "filetree-pro.refresh",
         "title": "Refresh File Tree",
         "icon": "media/icon.png"
       },
       {
-        "command": "filetreeproai.search",
+        "command": "filetree-pro.search",
         "title": "Search Files",
         "icon": "media/icon.png"
       },
       {
-        "command": "filetreeproai.export",
+        "command": "filetree-pro.export",
         "title": "Export Tree",
         "icon": "media/icon.png"
       },
       {
-        "command": "filetreeproai.analyze",
+        "command": "filetree-pro.analyze",
         "title": "Analyze Project",
         "icon": "media/icon.png"
       },
       {
-        "command": "filetreeproai.openFile",
+        "command": "filetree-pro.openFile",
         "title": "Open File",
         "icon": "media/icon.png"
       },
       {
-        "command": "filetreeproai.copyPath",
+        "command": "filetree-pro.copyPath",
         "title": "Copy Path",
         "icon": "media/icon.png"
       },
       {
-        "command": "filetreeproai.revealInExplorer",
+        "command": "filetree-pro.revealInExplorer",
         "title": "Reveal in Explorer",
         "icon": "media/icon.png"
       },
       {
-        "command": "filetreeproai.generateFileTree",
+        "command": "filetree-pro.generateFileTree",
         "title": "Generate File Tree",
         "icon": "media/icon.png"
       }
@@ -74,16 +82,16 @@
     "menus": {
       "explorer/context": [
         {
-          "command": "filetreeproai.generateFileTree",
+          "command": "filetree-pro.generateFileTree",
           "when": "explorerResourceIsFolder",
           "group": "navigation@1"
         }
       ]
     },
     "configuration": {
-      "title": "FileTreeProAI",
+      "title": "FileTree Pro",
       "properties": {
-        "filetreeproai.exclude": {
+        "filetree-pro.exclude": {
           "type": "array",
           "default": [
             "node_modules",
@@ -107,7 +115,7 @@
           ],
           "description": "Files and folders to exclude from the file tree"
         },
-        "filetreeproai.useCopilot": {
+        "filetree-pro.useCopilot": {
           "type": "boolean",
           "default": true,
           "description": "Enable AI features using GitHub Copilot (if installed)"
@@ -137,7 +145,7 @@
           "default": true,
           "description": "Enable project analytics dashboard"
         },
-        "filetreeproai.showIcons": {
+        "filetree-pro.showIcons": {
           "type": "boolean",
           "default": true,
           "description": "Show file and folder icons in the generated tree"

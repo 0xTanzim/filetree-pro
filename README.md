@@ -1,275 +1,206 @@
-# 🌳 FileTreeProAI - Premium VS Code Extension
+# 🌳 FileTree Pro - VS Code Extension
 
-A smart, interactive file tree generator for VS Code and Cursor with GitHub Copilot integration for AI-powered features.
+A powerful file tree generator for VS Code and Cursor. Generate beautiful file trees in multiple formats with smart exclusions and custom configurations.
 
-## ✨ Features
-
-### 🌳 Smart File Tree
-
-- **Interactive Tree View**: Collapsible file tree in the Explorer panel
-- **Smart Exclusions**: Automatically excludes `node_modules`, `dist`, `.git`, `.venv`, `build`, `out`, `.pyc`, `target`, etc.
-- **Real-time Updates**: Tracks file changes using VS Code's file system watcher
-- **Multi-language Support**: Works with all programming languages (Python, JavaScript, Java, C++, Go, Ruby, etc.)
-
-### 🔍 Advanced Search & Filter
-
-- **Real-time Search**: Find files by name, extension, or content
-- **Smart Filtering**: Filter by file type, size, and date
-- **Search History**: Save and reuse search queries
-
-### 📊 Analytics Dashboard
-
-- **Project Statistics**: File counts, sizes, and type distribution
-- **Visual Charts**: Interactive charts showing project structure
-- **Performance Metrics**: Track project health and trends
-
-### 🤖 AI-Powered Features (Copilot Required)
-
-- **File Summarization**: Get intelligent summaries of file contents
-- **Organization Suggestions**: AI-powered recommendations for file structure
-- **Naming Conventions**: Smart suggestions for file and folder names
-- **Code Analysis**: Complexity analysis and improvement suggestions
-
-### 📤 Export & Share
-
-- **Multiple Formats**: Export as JSON, Markdown, SVG, or ASCII
-- **Visual Diagrams**: Generate PNG/SVG diagrams for documentation
-- **Clipboard Support**: Copy file paths and tree structures
-- **Team Collaboration**: Shareable links for team projects
-
-## 🚀 Installation
-
-### From VS Code Marketplace
-
-1. Open VS Code
-2. Go to Extensions (Ctrl+Shift+X)
-3. Search for "FileTreeProAI"
-4. Click Install
-
-### From VSIX Package
-
-1. Download the `.vsix` file from releases
-2. In VS Code, go to Extensions
-3. Click the "..." menu and select "Install from VSIX..."
-4. Choose the downloaded file
-
-### Manual Installation
-
-```bash
-# Clone the repository
-git clone https://github.com/your-username/filetreeproai.git
-cd filetreeproai
-
-# Install dependencies
-pnpm install
-
-# Compile the extension
-pnpm run compile
-
-# Package the extension
-pnpm run package
-```
-
-## 🎯 Quick Start
-
-1. **Open a Project**: Open any project folder in VS Code
-2. **View File Tree**: Click the FileTreeProAI icon in the activity bar
-3. **Explore Files**: Navigate through the interactive file tree
-4. **Search Files**: Use the search bar to find specific files
-5. **Export Tree**: Right-click to export the tree in various formats
+[![Version](https://img.shields.io/badge/version-0.1.0-blue.svg)](https://marketplace.visualstudio.com/items?itemName=filetree-pro)
+[![Downloads](https://img.shields.io/badge/downloads-0-brightgreen.svg)](https://marketplace.visualstudio.com/items?itemName=filetree-pro)
+[![Rating](https://img.shields.io/badge/rating-0.0-yellow.svg)](https://marketplace.visualstudio.com/items?itemName=filetree-pro)
 
 ## ⚙️ Configuration
 
-### Settings
+### Quick Setup
 
-Add these to your VS Code settings:
+Add this to your VS Code settings (`Ctrl/Cmd + ,`):
 
 ```json
 {
-  "filetreeproai.exclude": [
+  "filetree-pro.exclude": [
     "**/node_modules/**",
     "**/dist/**",
     "**/.git/**",
     "**/.venv/**",
     "**/build/**",
-    "**/out/**",
-    "**/*.pyc",
-    "**/target/**"
+    "**/coverage/**",
+    "**/*.log",
+    "**/*.tmp"
   ],
-  "filetreeproai.useCopilot": true,
-  "filetreeproai.maxDepth": 10,
-  "filetreeproai.showFileSize": true,
-  "filetreeproai.showFileDate": true,
-  "filetreeproai.enableSearch": true,
-  "filetreeproai.enableAnalytics": true
+  "filetree-pro.showIcons": true,
+  "filetree-pro.useCopilot": false
 }
 ```
 
 ### Custom Exclusions
 
-Add your own exclusion patterns:
+Add your own patterns to exclude files/folders:
 
 ```json
 {
-  "filetreeproai.exclude": ["**/node_modules/**", "**/coverage/**", "**/.DS_Store", "**/Thumbs.db"]
+  "filetree-pro.exclude": [
+    "**/node_modules/**",
+    "**/my-custom-folder/**",
+    "**/*.test.js",
+    "**/temp/**"
+  ]
 }
 ```
 
-## 🎨 Commands
+## 🚀 Features
 
-### Tree View Commands
+### 📁 Smart File Tree Generation
 
-- `FileTreeProAI: Refresh Tree` - Refresh the file tree
-- `FileTreeProAI: Search Files` - Open search dialog
-- `FileTreeProAI: Export Tree` - Export tree in various formats
-- `FileTreeProAI: Show Analytics` - Open analytics dashboard
+- **Right-click any folder** → Generate file tree
+- **4 Output Formats**: Markdown, JSON, SVG, ASCII
+- **Icon Support**: Beautiful icons for all file types
+- **Smart Exclusions**: Automatically excludes build files, dependencies, and temp files
 
-### File Operations
+### 🌍 Universal Language Support
 
-- `FileTreeProAI: Open File` - Open selected file
-- `FileTreeProAI: Copy Path` - Copy file path to clipboard
-- `FileTreeProAI: Reveal in Explorer` - Show file in system explorer
+- **50+ Programming Languages**: JavaScript, Python, Java, C++, Go, Rust, Kotlin, Scala, C#, F#, Dart, R, MATLAB, Julia, Perl, Lua, Haskell, Clojure, Elixir, Erlang, OCaml, Nim, Zig, V, Assembly, and more
+- **Special Files**: Dockerfile, Makefile, README, LICENSE, CHANGELOG
+- **Web Technologies**: HTML, CSS, SCSS, Vue, Svelte
+- **Configuration Files**: YAML, TOML, INI, XML, JSON
 
-### AI Features (Copilot Required)
+### 🎨 Multiple Export Formats
 
-- `FileTreeProAI: Analyze with Copilot` - Get AI analysis of selected file
-- `FileTreeProAI: Get Project Suggestions` - Get AI suggestions for project structure
+| Format          | Use Case                | Features                |
+| --------------- | ----------------------- | ----------------------- |
+| **📄 Markdown** | Documentation, GitHub   | Icons, clean formatting |
+| **📊 JSON**     | APIs, Data processing   | Structured data, icons  |
+| **🎨 SVG**      | Presentations, diagrams | Visual, scalable        |
+| **📝 ASCII**    | Universal compatibility | Plain text, portable    |
 
-## 🤖 Copilot Integration
+### 🛡️ Smart Exclusions
 
-### Requirements
+Automatically excludes common build artifacts:
 
-- GitHub Copilot extension installed and active
-- Valid Copilot subscription
+- `node_modules`, `dist`, `build`, `out`
+- `.git`, `.venv`, `venv`, `env`
+- `*.log`, `*.tmp`, `*.cache`
+- `__pycache__`, `*.pyc`
+- `target`, `bin`, `obj`
+- `.DS_Store`, `Thumbs.db`
 
-### Features
+### ⚡ Performance Optimized
 
-- **File Summarization**: Get intelligent summaries of code files
-- **Organization Suggestions**: AI recommendations for better file structure
-- **Naming Conventions**: Smart suggestions for file and folder names
-- **Code Analysis**: Complexity analysis and improvement suggestions
+- **Memory Management**: Efficient for large projects
+- **Async Processing**: Non-blocking tree generation
+- **Loading States**: Visual feedback during processing
+- **Batch Processing**: Handles 10,000+ files smoothly
 
-### Usage
+## 🎯 Quick Start
 
-1. Right-click on any file in the tree
-2. Select "Analyze with Copilot"
-3. View AI-generated insights and suggestions
+1. **Install Extension**: Search "FileTree Pro" in VS Code Extensions
+2. **Open Project**: Open any project folder in VS Code
+3. **Generate Tree**: Right-click on any folder → "Generate File Tree"
+4. **Choose Format**: Select Markdown, JSON, SVG, or ASCII
+5. **Choose Style**: With or without icons
+6. **Save**: The tree opens in an unsaved tab - save when ready!
 
-## 📊 Analytics Dashboard
+## 📋 Commands
 
-### Project Statistics
+- `Generate File Tree` - Right-click on folder to generate tree
+- `Refresh Tree` - Regenerate with current settings
+- `Export Tree` - Export in different formats
 
-- Total files and folders
-- Total project size
-- File type distribution
-- Largest files
-- Recent files
+## 🎨 Examples
 
-### Visual Charts
-
-- File type pie chart
-- File size distribution
-- Project structure timeline
-
-### Export Options
-
-- JSON data export
-- PNG/SVG chart export
-- CSV data export
-
-## 🔧 Development
-
-### Prerequisites
-
-- Node.js 18+
-- pnpm
-- VS Code 1.85+
-
-### Setup
-
-```bash
-# Install dependencies
-pnpm install
-
-# Compile TypeScript
-pnpm run compile
-
-# Run tests
-pnpm test
-
-# Package extension
-pnpm run package
-```
-
-### Project Structure
+### Markdown Output
 
 ```
-src/
-├── extension.ts          # Main extension entry point
-├── types.ts             # TypeScript type definitions
-├── services/
-│   ├── fileSystemService.ts    # File system operations
-│   ├── copilotService.ts       # Copilot integration
-│   └── analyticsService.ts     # Analytics and statistics
-├── providers/
-│   └── fileTreeProvider.ts     # Tree view data provider
-├── commands/
-│   └── commands.ts             # Command registrations
-└── utils/
-    └── fileUtils.ts            # Utility functions
+# File Tree: my-project
+
+├── 📁 src/
+│   ├── 📄 main.js
+│   ├── 📄 utils.js
+│   └── 📁 components/
+│       ├── 📄 Header.js
+│       └── 📄 Footer.js
+├── 📄 package.json
+├── 📄 README.md
+└── 📁 node_modules/ 🚫 (auto-hidden)
 ```
 
-### Testing
+### JSON Output
 
-```bash
-# Run unit tests
-pnpm test
-
-# Run tests with coverage
-pnpm test --coverage
-
-# Run specific test file
-pnpm test fileSystemService.test.ts
+```json
+{
+  "name": "my-project",
+  "type": "directory",
+  "icon": "📁",
+  "children": [
+    {
+      "name": "src",
+      "type": "directory",
+      "icon": "📁",
+      "children": [...]
+    }
+  ]
+}
 ```
 
-## 🎯 Use Cases
+## 🔧 Advanced Configuration
+
+### Custom Exclusions
+
+```json
+{
+  "filetree-pro.exclude": [
+    "**/node_modules/**",
+    "**/dist/**",
+    "**/.git/**",
+    "**/my-custom-folder/**",
+    "**/*.test.js",
+    "**/temp/**",
+    "**/logs/**"
+  ]
+}
+```
+
+### Icon Settings
+
+```json
+{
+  "filetree-pro.showIcons": true
+}
+```
+
+### Copilot Integration (Optional)
+
+```json
+{
+  "filetree-pro.useCopilot": false
+}
+```
+
+## 🌟 Use Cases
 
 ### For Developers
 
-- **Project Navigation**: Quickly find and navigate files
-- **Code Organization**: Understand project structure at a glance
-- **File Discovery**: Discover related files and dependencies
+- **Project Documentation**: Generate file trees for README files
+- **Code Reviews**: Share project structure with team
+- **Onboarding**: Help new developers understand project layout
+- **Architecture Analysis**: Visualize project structure
 
 ### For Teams
 
-- **Documentation**: Export file trees for project documentation
-- **Code Reviews**: Share file structures for review discussions
-- **Onboarding**: Help new team members understand project structure
+- **Documentation**: Export trees for project docs
+- **Presentations**: Use SVG format for slides
+- **API Documentation**: JSON format for tools
+- **Cross-platform**: ASCII format works everywhere
 
 ### For Educators
 
-- **Teaching**: Visualize project structures for students
-- **Examples**: Show different project organization patterns
+- **Teaching**: Show project structures to students
+- **Examples**: Demonstrate different project organizations
 - **Analysis**: Analyze student project structures
 
 ## 🚀 Performance
 
-### Optimizations
-
-- **Lazy Loading**: Tree items load on demand
-- **Caching**: File system data cached for performance
-- **Incremental Updates**: Only refresh changed parts of the tree
-- **Memory Management**: Efficient memory usage for large projects
-
-### Benchmarks
-
-- **Small Projects** (< 1,000 files): < 1 second load time
-- **Medium Projects** (1,000-10,000 files): < 3 seconds load time
-- **Large Projects** (10,000+ files): < 10 seconds load time
+- **Small Projects** (< 1,000 files): < 1 second
+- **Medium Projects** (1,000-10,000 files): < 3 seconds
+- **Large Projects** (10,000+ files): < 10 seconds
 
 ## 🤝 Contributing
-
-### Development Setup
 
 1. Fork the repository
 2. Create a feature branch
@@ -277,54 +208,27 @@ pnpm test fileSystemService.test.ts
 4. Add tests for new features
 5. Submit a pull request
 
-### Code Style
-
-- TypeScript for type safety
-- ESLint for code quality
-- Prettier for formatting
-- Jest for testing
-
-### Testing Guidelines
-
-- Unit tests for all new features
-- Integration tests for complex interactions
-- Performance tests for large projects
-
 ## 📝 Changelog
 
-### v0.1.0 (Current)
+### v0.1.0
 
-- ✅ Core file tree functionality
+- ✅ Core file tree generation
+- ✅ 4 output formats (Markdown, JSON, SVG, ASCII)
+- ✅ Universal language support (50+ languages)
 - ✅ Smart exclusions system
-- ✅ Basic search and filter
-- ✅ Copilot integration framework
-- ✅ Analytics dashboard
-- ✅ Export functionality
+- ✅ Custom configuration support
+- ✅ Performance optimizations
 - ✅ VS Code and Cursor compatibility
-
-### Planned Features
-
-- 🎯 Drag-and-drop file organization
-- 🎯 Advanced search with regex
-- 🎯 Custom themes and icons
-- 🎯 Performance optimizations
-- 🎯 Enhanced AI features
 
 ## 📄 License
 
 MIT License - see [LICENSE](LICENSE) file for details.
 
-## 🙏 Acknowledgments
+## ☕ Support
 
-- VS Code Extension API
-- GitHub Copilot for AI features
-- Community contributors and feedback
+If you find this extension helpful, consider buying me a coffee! ☕
 
-## 📞 Support
-
-- **Issues**: [GitHub Issues](https://github.com/your-username/filetreeproai/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/your-username/filetreeproai/discussions)
-- **Documentation**: [Wiki](https://github.com/your-username/filetreeproai/wiki)
+[![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-%23FFDD00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](https://buymeacoffee.com/tanzimhossain)
 
 ---
 

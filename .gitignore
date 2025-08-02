@@ -6,3 +6,9 @@ opensource\
 out
 dist
 .vsix
+*.vsix
+filetreeproai-0.1.0.vsix
+*.log
+*.tmp
+*.vsix
+*.swp

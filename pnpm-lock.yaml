@@ -21,6 +21,15 @@ importers:
       '@eslint/js':
         specifier: ^9.32.0
         version: 9.32.0
+      '@iconify/icons-devicon':
+        specifier: ^1.2.17
+        version: 1.2.17
+      '@iconify/icons-file-icons':
+        specifier: ^1.2.3
+        version: 1.2.3
+      '@iconify/icons-simple-icons':
+        specifier: ^1.2.74
+        version: 1.2.74
       '@testing-library/jest-dom':
         specifier: ^6.6.4
         version: 6.6.4
@@ -354,6 +363,18 @@ packages:
   '@humanwhocodes/retry@0.4.3':
     resolution: {integrity: sha512-bV0Tgo9K4hfPCek+aMAn81RppFKv2ySDQeMoSZuvTASywNTnVJCArCZE2FWqpvIatKu7VMRLWlR1EazvVhDyhQ==}
     engines: {node: '>=18.18'}
+
+  '@iconify/icons-devicon@1.2.17':
+    resolution: {integrity: sha512-F1f8y8PEBGgDKyisCDuJ++8yeNkvQ5mUKxH0Ts1GJDY5Htv39wQXEgXvwIEltkBH/tb0G0oqGNwAz0WrKG3o/A==}
+
+  '@iconify/icons-file-icons@1.2.3':
+    resolution: {integrity: sha512-y68vu+pMcxTQ5m3nn5ALhO5XvBaSliBX7ipKynKgAz/EPyPEGdshIZ41HCiv1yniYOf4Gd9oi6L75RbUL8iE1Q==}
+
+  '@iconify/icons-simple-icons@1.2.74':
+    resolution: {integrity: sha512-bsmbvwO8hauz49z740CYg70IDevOgshUoq4q1IKt6NnElnn+N2F6AseO3Uti82yUU4OHyQqkWjjUwoPTazlNnA==}
+
+  '@iconify/types@2.0.0':
+    resolution: {integrity: sha512-+wluvCrRhXrhyOmRDJ3q8mux9JkKy5SJ/v8ol2tu4FVjyYvtEzkc/3pK15ET6RKg4b4w4BmTk1+gsCUhf21Ykg==}
 
   '@isaacs/balanced-match@4.0.1':
     resolution: {integrity: sha512-yzMTt9lEb8Gv7zRioUilSglI0c0smZ9k5D65677DLWLtWJaXIS3CqcGyUFByYKlnUj6TkjLVs54fBl6+TiGQDQ==}
@@ -3221,6 +3242,20 @@ snapshots:
   '@humanwhocodes/retry@0.3.1': {}
 
   '@humanwhocodes/retry@0.4.3': {}
+
+  '@iconify/icons-devicon@1.2.17':
+    dependencies:
+      '@iconify/types': 2.0.0
+
+  '@iconify/icons-file-icons@1.2.3':
+    dependencies:
+      '@iconify/types': 2.0.0
+
+  '@iconify/icons-simple-icons@1.2.74':
+    dependencies:
+      '@iconify/types': 2.0.0
+
+  '@iconify/types@2.0.0': {}
 
   '@isaacs/balanced-match@4.0.1': {}
 

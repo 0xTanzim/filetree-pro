@@ -6,7 +6,7 @@ export function registerCommands(): vscode.Disposable[] {
 
   // Generate File Tree command (main command)
   disposables.push(
-    vscode.commands.registerCommand('filetreeproai.generateFileTree', async (uri: vscode.Uri) => {
+    vscode.commands.registerCommand('filetree-pro.generateFileTree', async (uri: vscode.Uri) => {
       try {
         if (!uri) {
           vscode.window.showErrorMessage('Please right-click on a folder to generate file tree');
@@ -16,6 +16,24 @@ export function registerCommands(): vscode.Disposable[] {
         // Get the folder path
         const folderPath = uri.fsPath;
         const folderName = path.basename(folderPath);
+
+        // Ask user for format preference
+        const formatChoice = await vscode.window.showQuickPick(
+          [
+            { label: '📄 Markdown', value: 'markdown' },
+            { label: '📊 JSON', value: 'json' },
+            { label: '🎨 SVG', value: 'svg' },
+            { label: '📝 ASCII', value: 'ascii' },
+          ],
+          {
+            placeHolder: 'Choose output format',
+            canPickMany: false,
+          }
+        );
+
+        if (!formatChoice) {
+          return; // User cancelled
+        }
 
         // Ask user for icon preference
         const iconChoice = await vscode.window.showQuickPick(['With Icons', 'Without Icons'], {
@@ -29,38 +47,49 @@ export function registerCommands(): vscode.Disposable[] {
 
         const useIcons = iconChoice === 'With Icons';
 
-        // Show progress
-        vscode.window.showInformationMessage(`Generating file tree for ${folderName}...`);
+        // Show progress with loading indicator
+        const progressOptions = {
+          location: vscode.ProgressLocation.Notification,
+          title: `Generating file tree for ${folderName}`,
+          cancellable: false,
+        };
 
-        // Generate the file tree
-        const treeContent = await generateFileTree(folderPath, 10, useIcons);
+        await vscode.window.withProgress(progressOptions, async progress => {
+          progress.report({ message: 'Starting tree generation...' });
 
-        // Ask user where to save the file
-        const saveUri = await vscode.window.showSaveDialog({
-          defaultUri: vscode.Uri.file(path.join(folderPath, `file-tree-${folderName}.md`)),
-          filters: {
-            'Markdown Files': ['md'],
-            'Text Files': ['txt'],
-            'All Files': ['*'],
-          },
-          saveLabel: 'Save File Tree',
+          // Generate the file tree based on format with progress updates
+          const treeContent = await generateFileTree(
+            folderPath,
+            10,
+            useIcons,
+            formatChoice.value,
+            message => {
+              progress.report({ message });
+            }
+          );
+
+          progress.report({ message: 'Creating document...' });
+
+          // Create an untitled document with the tree content
+          const document = await vscode.workspace.openTextDocument({
+            content: treeContent,
+            language:
+              formatChoice.value === 'json'
+                ? 'json'
+                : formatChoice.value === 'svg'
+                  ? 'xml'
+                  : formatChoice.value === 'ascii'
+                    ? 'plaintext'
+                    : 'markdown',
+          });
+
+          // Show the document in a new tab (unsaved mode)
+          await vscode.window.showTextDocument(document);
+
+          vscode.window.showInformationMessage(
+            `File tree generated successfully! Ready to save when you're ready.`
+          );
         });
-
-        if (!saveUri) {
-          return; // User cancelled
-        }
-
-        // Write the file to user-selected location
-        await vscode.workspace.fs.writeFile(saveUri, Buffer.from(treeContent, 'utf8'));
-
-        // Open the generated file
-        const document = await vscode.workspace.openTextDocument(saveUri);
-        await vscode.window.showTextDocument(document);
-
-        const fileName = path.basename(saveUri.fsPath);
-        vscode.window.showInformationMessage(
-          `File tree generated successfully! Saved as ${fileName}`
-        );
       } catch (error) {
         vscode.window.showErrorMessage(`Failed to generate file tree: ${error}`);
       }
@@ -73,7 +102,9 @@ export function registerCommands(): vscode.Disposable[] {
 async function generateFileTree(
   rootPath: string,
   maxDepth: number = 10,
-  forceShowIcons?: boolean
+  forceShowIcons?: boolean,
+  format: string = 'markdown',
+  progressCallback?: (message: string) => void
 ): Promise<string> {
   const lines: string[] = [];
 
@@ -82,58 +113,82 @@ async function generateFileTree(
   const showIcons =
     forceShowIcons !== undefined ? forceShowIcons : config.get<boolean>('showIcons', true);
 
-  // Add header
-  lines.push(`# File Tree: ${path.basename(rootPath)}`);
-  lines.push('');
-  lines.push(`Generated on: ${new Date().toLocaleString()}`);
-  lines.push(`Root path: \`${rootPath}\``);
-  lines.push('');
-  lines.push(
-    '**Note:** Common build folders, dependencies, and temporary files are automatically excluded.'
-  );
-  lines.push('');
-  lines.push('```');
-
-  // Generate tree structure
-  await generateTreeLines(rootPath, '', lines, 0, maxDepth, showIcons);
-
-  lines.push('```');
-  lines.push('');
-  lines.push('---');
-  lines.push('*Generated by FileTreeProAI Extension*');
-
-  return lines.join('\n');
+  // Generate based on format
+  switch (format) {
+    case 'json':
+      return await generateJsonTree(rootPath, maxDepth, showIcons, progressCallback);
+    case 'svg':
+      return await generateSvgTree(rootPath, maxDepth, showIcons, progressCallback);
+    case 'ascii':
+      return await generateAsciiTree(rootPath, maxDepth, showIcons, progressCallback);
+    case 'markdown':
+    default:
+      return await generateMarkdownTree(rootPath, maxDepth, showIcons, progressCallback);
+  }
 }
 
-async function generateTreeLines(
+export async function generateTreeLines(
   currentPath: string,
   prefix: string,
   lines: string[],
   depth: number,
   maxDepth: number,
-  showIcons: boolean
+  showIcons: boolean,
+  progressCallback?: (message: string) => void
 ): Promise<void> {
   if (depth > maxDepth) {
     return;
   }
 
   try {
+    // Update progress for large directories
+    if (progressCallback && depth === 0) {
+      progressCallback(`Reading directory: ${path.basename(currentPath)}`);
+    }
+
     const items = await vscode.workspace.fs.readDirectory(vscode.Uri.file(currentPath));
 
     // Sort items: folders first, then files
     const folders: string[] = [];
     const files: string[] = [];
 
-    for (const [item, fileType] of items) {
-      // Skip excluded folders and files
-      if (shouldExclude(item)) {
-        continue;
+    // Process items in batches to avoid memory issues
+    const batchSize = 100;
+    for (let i = 0; i < items.length; i += batchSize) {
+      const batch = items.slice(i, i + batchSize);
+
+      // Process batch asynchronously
+      const batchPromises = batch.map(async ([item, fileType]) => {
+        const isExcluded = shouldExclude(item);
+
+        if (fileType === vscode.FileType.Directory) {
+          return { item, type: 'folder' as const, isExcluded };
+        } else {
+          return { item, type: 'file' as const, isExcluded };
+        }
+      });
+
+      const batchResults = await Promise.all(batchPromises);
+
+      for (const result of batchResults) {
+        if (result) {
+          if (result.type === 'folder') {
+            folders.push(result.item);
+          } else {
+            files.push(result.item);
+          }
+        }
       }
 
-      if (fileType === vscode.FileType.Directory) {
-        folders.push(item);
-      } else {
-        files.push(item);
+      // Update progress for large directories
+      if (progressCallback && items.length > batchSize) {
+        const progress = Math.min(100, Math.round(((i + batchSize) / items.length) * 100));
+        progressCallback(`Processing items: ${progress}%`);
+      }
+
+      // Yield control periodically to prevent blocking
+      if (i % 50 === 0) {
+        await new Promise(resolve => setTimeout(resolve, 0));
       }
     }
 
@@ -141,28 +196,56 @@ async function generateTreeLines(
     folders.sort();
     files.sort();
 
-    // Process folders
+    // Process folders with memory management
     for (let i = 0; i < folders.length; i++) {
       const folder = folders[i];
       const isLast = i === folders.length - 1 && files.length === 0;
       const connector = isLast ? '└── ' : '├── ';
       const newPrefix = prefix + (isLast ? '    ' : '│   ');
 
-      lines.push(`${prefix}${connector}${showIcons ? '📁 ' : ''}${folder}/`);
+      // Check if folder is excluded
+      const isExcluded = shouldExclude(folder);
+      const exclusionIndicator = isExcluded ? ' 🚫 (auto-hidden)' : '';
 
-      const folderPath = path.join(currentPath, folder);
-      await generateTreeLines(folderPath, newPrefix, lines, depth + 1, maxDepth, showIcons);
+      lines.push(`${prefix}${connector}${showIcons ? '📁 ' : ''}${folder}/${exclusionIndicator}`);
+
+      if (!isExcluded) {
+        const folderPath = path.join(currentPath, folder);
+        await generateTreeLines(
+          folderPath,
+          newPrefix,
+          lines,
+          depth + 1,
+          maxDepth,
+          showIcons,
+          progressCallback
+        );
+      }
+
+      // Yield control periodically to prevent blocking
+      if (i % 10 === 0) {
+        await new Promise(resolve => setTimeout(resolve, 0));
+      }
     }
 
-    // Process files
+    // Process files with memory management
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
       const isLast = i === files.length - 1;
       const connector = isLast ? '└── ' : '├── ';
 
+      // Check if file is excluded
+      const isExcluded = shouldExclude(file);
+      const exclusionIndicator = isExcluded ? ' 🚫 (auto-hidden)' : '';
+
       // Get file icon based on extension
       const icon = showIcons ? getFileIcon(file) + ' ' : '';
-      lines.push(`${prefix}${connector}${icon}${file}`);
+      lines.push(`${prefix}${connector}${icon}${file}${exclusionIndicator}`);
+
+      // Yield control periodically to prevent blocking
+      if (i % 50 === 0) {
+        await new Promise(resolve => setTimeout(resolve, 0));
+      }
     }
   } catch (error) {
     lines.push(`${prefix}└── ❌ Error reading directory: ${error}`);
@@ -171,64 +254,260 @@ async function generateTreeLines(
 
 function getFileIcon(filename: string): string {
   const ext = path.extname(filename).toLowerCase();
+  const basename = path.basename(filename).toLowerCase();
 
   const iconMap: { [key: string]: string } = {
+    // JavaScript/TypeScript Ecosystem
     '.js': '📄',
     '.ts': '📄',
     '.jsx': '📄',
     '.tsx': '📄',
     '.json': '📄',
-    '.md': '📝',
-    '.txt': '📄',
+    '.mjs': '📄',
+    '.cjs': '📄',
+
+    // Web Technologies
     '.html': '🌐',
+    '.htm': '🌐',
     '.css': '🎨',
     '.scss': '🎨',
     '.sass': '🎨',
     '.less': '🎨',
+    '.styl': '🎨',
+    '.vue': '🟢',
+    '.svelte': '🟠',
+
+    // Python Ecosystem
     '.py': '🐍',
+    '.pyw': '🐍',
+    '.pyi': '🐍',
+    '.ipynb': '📓',
+
+    // Java Ecosystem
     '.java': '☕',
+    '.class': '☕',
+    '.jar': '☕',
+    '.war': '☕',
+
+    // C/C++ Ecosystem
     '.cpp': '⚙️',
+    '.cc': '⚙️',
+    '.cxx': '⚙️',
     '.c': '⚙️',
     '.h': '⚙️',
+    '.hpp': '⚙️',
+    '.hxx': '⚙️',
+    '.obj': '⚙️',
+    '.o': '⚙️',
+    '.so': '⚙️',
+    '.dll': '⚙️',
+    '.exe': '⚙️',
+
+    // Go
     '.go': '🐹',
+    '.mod': '🐹',
+    '.sum': '🐹',
+
+    // Rust
     '.rs': '🦀',
+
+    // PHP
     '.php': '🐘',
+    '.phtml': '🐘',
+
+    // Ruby
     '.rb': '💎',
+    '.erb': '💎',
+    '.rake': '💎',
+    '.gemspec': '💎',
+
+    // Swift
     '.swift': '🍎',
-    '.kt': '☕',
-    '.scala': '☕',
+
+    // Kotlin
+    '.kt': '🟦',
+    '.kts': '🟦',
+
+    // Scala
+    '.scala': '🔴',
+    '.sc': '🔴',
+
+    // C#
+    '.cs': '🟣',
+    '.csproj': '🟣',
+    '.sln': '🟣',
+
+    // F#
+    '.fs': '🟣',
+    '.fsx': '🟣',
+    '.fsproj': '🟣',
+
+    // Dart
+    '.dart': '🔵',
+
+    // R
+    '.r': '📊',
+    '.R': '📊',
+    '.Rmd': '📊',
+
+    // MATLAB
+    '.m': '📊',
+    '.mat': '📊',
+
+    // Julia
+    '.jl': '🟣',
+
+    // Perl
+    '.pl': '🐪',
+    '.pm': '🐪',
+    '.t': '🐪',
+
+    // Lua
+    '.lua': '🔵',
+
+    // Haskell
+    '.hs': '🟣',
+    '.lhs': '🟣',
+
+    // Clojure
+    '.clj': '🟢',
+    '.cljs': '🟢',
+    '.edn': '🟢',
+
+    // Elixir
+    '.ex': '🟣',
+    '.exs': '🟣',
+    '.eex': '🟣',
+
+    // Erlang
+    '.erl': '🔴',
+
+    // OCaml
+    '.ml': '🟠',
+    '.mli': '🟠',
+
+    // Nim
+    '.nim': '🟡',
+
+    // Zig
+    '.zig': '🟡',
+
+    // V
+    '.v': '🔵',
+
+    // Assembly
+    '.asm': '⚙️',
+    '.s': '⚙️',
+    '.S': '⚙️',
+
+    // Shell Scripts
     '.sh': '🐚',
+    '.bash': '🐚',
+    '.zsh': '🐚',
+    '.fish': '🐚',
     '.bat': '🐚',
+    '.cmd': '🐚',
     '.ps1': '🐚',
+
+    // Configuration Files
     '.yml': '⚙️',
     '.yaml': '⚙️',
     '.xml': '📄',
+    '.toml': '⚙️',
+    '.ini': '⚙️',
+    '.cfg': '⚙️',
+    '.conf': '⚙️',
+
+    // Documentation
+    '.md': '📝',
+    '.mdx': '📝',
+    '.rst': '📝',
+    '.txt': '📄',
+    '.adoc': '📝',
+
+    // Images
     '.svg': '🖼️',
     '.png': '🖼️',
     '.jpg': '🖼️',
     '.jpeg': '🖼️',
     '.gif': '🖼️',
     '.ico': '🖼️',
+    '.bmp': '🖼️',
+    '.tiff': '🖼️',
+    '.webp': '🖼️',
+
+    // Documents
     '.pdf': '📕',
+    '.doc': '📄',
+    '.docx': '📄',
+    '.xls': '📊',
+    '.xlsx': '📊',
+    '.ppt': '📊',
+    '.pptx': '📊',
+
+    // Archives
     '.zip': '📦',
     '.tar': '📦',
     '.gz': '📦',
+    '.bz2': '📦',
     '.rar': '📦',
     '.7z': '📦',
+
+    // Database
+    '.sql': '🗄️',
+    '.db': '🗄️',
+    '.sqlite': '🗄️',
+
+    // GraphQL
+    '.graphql': '🟣',
+    '.gql': '🟣',
+
+    // Docker
+    dockerfile: '🐳',
+
+    // Makefiles
+    makefile: '⚙️',
+
+    // Special Files
     '.gitignore': '🚫',
     '.env': '🔒',
     '.lock': '🔒',
     '.log': '📋',
     '.tmp': '🗑️',
     '.cache': '🗑️',
+    '.bak': '🗑️',
+    '.old': '🗑️',
   };
+
+  // Check for special filenames (case-insensitive)
+  if (basename === 'dockerfile') return '🐳';
+  if (basename === 'makefile') return '⚙️';
+  if (basename === 'readme' || basename.startsWith('readme.')) return '📖';
+  if (basename === 'license' || basename.startsWith('license.')) return '📜';
+  if (basename === 'changelog' || basename.startsWith('changelog.')) return '📝';
+  if (basename === '.gitignore') return '🚫';
+  if (basename === '.env') return '🔒';
 
   return iconMap[ext] || '📄';
 }
 
-function shouldExclude(item: string): boolean {
+export async function readGitignore(rootPath: string): Promise<string[]> {
+  const gitignorePath = path.join(rootPath, '.gitignore');
+  try {
+    const content = await vscode.workspace.fs.readFile(vscode.Uri.file(gitignorePath));
+    return content
+      .toString()
+      .split('\n')
+      .filter(line => line.trim() && !line.startsWith('#'))
+      .map(line => line.trim());
+  } catch {
+    return [];
+  }
+}
+
+export function shouldExclude(item: string): boolean {
   // Get user-defined exclusions from settings
-  const config = vscode.workspace.getConfiguration('filetreeproai');
+  const config = vscode.workspace.getConfiguration('filetree-pro');
   const userExclusions = config.get<string[]>('exclude', []);
 
   // Common folders and files to exclude
@@ -245,32 +524,48 @@ function shouldExclude(item: string): boolean {
     '.nuxt',
     '.output',
     'coverage',
+    'coverage.lcov',
+    '.nyc_output',
+    'lib',
+    'libs',
+    'vendor',
+    'bower_components',
+    'jspm_packages',
 
     // Version control
     '.git',
     '.svn',
     '.hg',
+    '.bzr',
 
     // IDE and editor folders
     '.vscode',
     '.idea',
     '.vs',
     '.cursor',
+    '.atom',
+    '.sublime-project',
+    '.sublime-workspace',
 
     // Environment and config
     '.env',
     '.env.local',
     '.env.production',
     '.env.development',
+    '.env.test',
     'venv',
     '.venv',
     'env',
     '.python-version',
+    '.ruby-version',
+    '.node-version',
 
     // OS generated
     '.DS_Store',
     'Thumbs.db',
     '.Trash',
+    'desktop.ini',
+    '$RECYCLE.BIN',
 
     // Logs and temp files
     '*.log',
@@ -278,6 +573,9 @@ function shouldExclude(item: string): boolean {
     '*.cache',
     '*.pyc',
     '__pycache__',
+    '*.swp',
+    '*.swo',
+    '*~',
 
     // Package managers
     'package-lock.json',
@@ -285,17 +583,80 @@ function shouldExclude(item: string): boolean {
     'pnpm-lock.yaml',
     'composer.lock',
     'Gemfile.lock',
+    'Pipfile.lock',
+    'poetry.lock',
+    'Cargo.lock',
+    'go.sum',
+    'mix.lock',
 
     // Build artifacts
     '*.min.js',
     '*.min.css',
     '*.map',
+    '*.bundle.js',
+    '*.chunk.js',
 
     // Generated files
     '.eslintcache',
     '.prettierignore',
     '.gitignore',
     '.gitattributes',
+    '.editorconfig',
+    '.babelrc',
+    '.babelrc.js',
+    'tsconfig.json',
+    'tsconfig.build.json',
+    'webpack.config.js',
+    'rollup.config.js',
+    'vite.config.js',
+    'jest.config.js',
+    'karma.conf.js',
+    'gulpfile.js',
+    'gruntfile.js',
+    'package.json',
+    'package-lock.json',
+    'yarn.lock',
+    'pnpm-lock.yaml',
+    'composer.json',
+    'composer.lock',
+    'Gemfile',
+    'Gemfile.lock',
+    'requirements.txt',
+    'Pipfile',
+    'poetry.lock',
+    'Cargo.toml',
+    'Cargo.lock',
+    'go.mod',
+    'go.sum',
+    'mix.exs',
+    'mix.lock',
+    'pom.xml',
+    'build.gradle',
+    'build.sbt',
+    'project.clj',
+    'deps.edn',
+    'package.json',
+    'package-lock.json',
+    'yarn.lock',
+    'pnpm-lock.yaml',
+    'composer.json',
+    'composer.lock',
+    'Gemfile',
+    'Gemfile.lock',
+    'requirements.txt',
+    'Pipfile',
+    'poetry.lock',
+    'Cargo.toml',
+    'Cargo.lock',
+    'go.mod',
+    'go.sum',
+    'mix.exs',
+    'mix.lock',
+    'pom.xml',
+    'build.gradle',
+    'build.sbt',
+    'project.clj',
+    'deps.edn',
   ];
 
   // Combine default and user exclusions
@@ -318,16 +679,307 @@ function shouldExclude(item: string): boolean {
     }
   }
 
-  // Check for common build/artifact patterns
+  // Check for common build/artifact patterns (only exact matches)
   if (
-    itemLower.includes('build') ||
-    itemLower.includes('dist') ||
-    itemLower.includes('cache') ||
-    itemLower.includes('temp') ||
-    itemLower.includes('tmp')
+    itemLower === 'build' ||
+    itemLower === 'dist' ||
+    itemLower === 'cache' ||
+    itemLower === 'temp' ||
+    itemLower === 'tmp'
   ) {
     return true;
   }
 
   return false;
+}
+
+export async function generateMarkdownTree(
+  rootPath: string,
+  maxDepth: number,
+  showIcons: boolean,
+  progressCallback?: (message: string) => void
+): Promise<string> {
+  const lines: string[] = [];
+
+  // Add header
+  lines.push(`# File Tree: ${path.basename(rootPath)}`);
+  lines.push('');
+  lines.push(`Generated on: ${new Date().toLocaleString()}`);
+  lines.push(`Root path: \`${rootPath}\``);
+  lines.push('');
+  lines.push('```');
+
+  // Generate tree structure
+  await generateTreeLines(rootPath, '', lines, 0, maxDepth, showIcons, progressCallback);
+
+  lines.push('```');
+  lines.push('');
+  lines.push('---');
+  lines.push('*Generated by FileTreeProAI Extension*');
+
+  return lines.join('\n');
+}
+
+export async function generateJsonTree(
+  rootPath: string,
+  maxDepth: number,
+  showIcons: boolean,
+  progressCallback?: (message: string) => void
+): Promise<string> {
+  const treeData = await buildTreeData(rootPath, maxDepth, showIcons, 0, progressCallback);
+
+  const jsonOutput = {
+    name: path.basename(rootPath),
+    path: rootPath,
+    type: 'directory',
+    children: treeData,
+    generated: new Date().toISOString(),
+    generator: 'FileTreeProAI Extension',
+    note: 'Common build folders, dependencies, and temporary files are automatically excluded.',
+    showIcons: showIcons,
+  };
+
+  return JSON.stringify(jsonOutput, null, 2);
+}
+
+export async function generateSvgTree(
+  rootPath: string,
+  maxDepth: number,
+  showIcons: boolean,
+  progressCallback?: (message: string) => void
+): Promise<string> {
+  const treeData = await buildTreeData(rootPath, maxDepth, showIcons, 0, progressCallback);
+
+  // Calculate dimensions based on content
+  const nodeCount = countNodes(treeData);
+  const svgWidth = 1000;
+  const svgHeight = Math.max(800, nodeCount * 25 + 100);
+
+  let svgContent = `<svg width="${svgWidth}" height="${svgHeight}" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+      <style>
+      .title { font-family: 'Arial', sans-serif; font-size: 18px; font-weight: bold; fill: #2c3e50; }
+      .subtitle { font-family: 'Arial', sans-serif; font-size: 12px; fill: #7f8c8d; }
+      .folder-text { font-family: 'Consolas', 'Courier New', monospace; font-size: 14px; fill: #27ae60; font-weight: bold; }
+      .file-text { font-family: 'Consolas', 'Courier New', monospace; font-size: 14px; fill: #3498db; }
+      .icon { font-family: 'Arial', sans-serif; font-size: 16px; }
+      .line { stroke: #bdc3c7; stroke-width: 1.5; }
+      .background { fill: #f8f9fa; }
+      .header-bg { fill: #ecf0f1; }
+      </style>
+  </defs>
+
+  <!-- Background -->
+  <rect width="${svgWidth}" height="${svgHeight}" class="background"/>
+
+  <!-- Header -->
+  <rect x="0" y="0" width="${svgWidth}" height="60" class="header-bg"/>
+  <text x="20" y="25" class="title">📁 File Tree: ${path.basename(rootPath)}</text>
+  <text x="20" y="45" class="subtitle">Generated: ${new Date().toLocaleString()} | FileTreeProAI Extension</text>
+
+  <!-- Tree Structure -->`;
+
+  let yOffset = 80;
+  const renderNode = (node: any, x: number, level: number, isLast: boolean = false) => {
+    const icon = showIcons ? (node.type === 'directory' ? '📁' : getFileIcon(node.name)) : '';
+    const displayName = node.name + (node.type === 'directory' ? '/' : '');
+    const textClass = node.type === 'directory' ? 'folder-text' : 'file-text';
+
+    // Draw connecting line if not root
+    if (level > 0) {
+      svgContent += `
+    <line x1="${x - 15}" y1="${yOffset - 10}" x2="${x - 15}" y2="${yOffset}" class="line"/>`;
+    }
+
+    // Draw horizontal line
+    svgContent += `
+    <line x1="${x - 15}" y1="${yOffset}" x2="${x - 5}" y2="${yOffset}" class="line"/>`;
+
+    // Draw icon and text
+    if (showIcons && icon) {
+      svgContent += `
+    <text x="${x}" y="${yOffset + 5}" class="icon">${icon}</text>
+    <text x="${x + 25}" y="${yOffset + 5}" class="${textClass}">${displayName}</text>`;
+    } else {
+      svgContent += `
+    <text x="${x}" y="${yOffset + 5}" class="${textClass}">${displayName}</text>`;
+    }
+
+    if (node.children && node.children.length > 0) {
+      yOffset += 30;
+      for (let i = 0; i < node.children.length; i++) {
+        const child = node.children[i];
+        const isLastChild = i === node.children.length - 1;
+        renderNode(child, x + 30, level + 1, isLastChild);
+        yOffset += 25;
+      }
+    }
+    yOffset += 10;
+  };
+
+  for (const node of treeData) {
+    renderNode(node, 30, 0);
+  }
+
+  svgContent += `
+</svg>`;
+
+  return svgContent;
+}
+
+export async function generateAsciiTree(
+  rootPath: string,
+  maxDepth: number,
+  showIcons: boolean,
+  progressCallback?: (message: string) => void
+): Promise<string> {
+  const lines: string[] = [];
+
+  // Add header
+  lines.push(`File Tree: ${path.basename(rootPath)}`);
+  lines.push(`Generated on: ${new Date().toLocaleString()}`);
+  lines.push(`Root path: ${rootPath}`);
+  lines.push('');
+  lines.push('─'.repeat(80));
+
+  // Generate tree structure
+  await generateTreeLines(rootPath, '', lines, 0, maxDepth, showIcons, progressCallback);
+
+  lines.push('');
+  lines.push('─'.repeat(80));
+  lines.push('Generated by FileTreeProAI Extension');
+
+  return lines.join('\n');
+}
+
+function countNodes(nodes: any[]): number {
+  let count = nodes.length;
+  for (const node of nodes) {
+    if (node.children && node.children.length > 0) {
+      count += countNodes(node.children);
+    }
+  }
+  return count;
+}
+
+async function buildTreeData(
+  currentPath: string,
+  maxDepth: number,
+  showIcons: boolean,
+  depth: number = 0,
+  progressCallback?: (message: string) => void
+): Promise<any[]> {
+  if (depth > maxDepth) {
+    return [];
+  }
+
+  try {
+    // Update progress for large directories
+    if (progressCallback && depth === 0) {
+      progressCallback(`Building tree data: ${path.basename(currentPath)}`);
+    }
+
+    const items = await vscode.workspace.fs.readDirectory(vscode.Uri.file(currentPath));
+    const result: any[] = [];
+
+    // Sort items: folders first, then files
+    const folders: string[] = [];
+    const files: string[] = [];
+
+    // Process items in batches to avoid memory issues
+    const batchSize = 100;
+    for (let i = 0; i < items.length; i += batchSize) {
+      const batch = items.slice(i, i + batchSize);
+
+      // Process batch asynchronously
+      const batchPromises = batch.map(async ([item, fileType]) => {
+        const isExcluded = shouldExclude(item);
+
+        if (fileType === vscode.FileType.Directory) {
+          return { item, type: 'folder' as const, isExcluded };
+        } else {
+          return { item, type: 'file' as const, isExcluded };
+        }
+      });
+
+      const batchResults = await Promise.all(batchPromises);
+
+      for (const batchResult of batchResults) {
+        if (batchResult) {
+          if (batchResult.type === 'folder') {
+            folders.push(batchResult.item);
+          } else {
+            files.push(batchResult.item);
+          }
+        }
+      }
+
+      // Update progress for large directories
+      if (progressCallback && items.length > batchSize) {
+        const progress = Math.min(100, Math.round(((i + batchSize) / items.length) * 100));
+        progressCallback(`Processing items: ${progress}%`);
+      }
+
+      // Yield control periodically to prevent blocking
+      if (i % 50 === 0) {
+        await new Promise(resolve => setTimeout(resolve, 0));
+      }
+    }
+
+    // Sort alphabetically
+    folders.sort();
+    files.sort();
+
+    // Process folders with memory management
+    for (let i = 0; i < folders.length; i++) {
+      const folder = folders[i];
+      const folderPath = path.join(currentPath, folder);
+      const children = await buildTreeData(
+        folderPath,
+        maxDepth,
+        showIcons,
+        depth + 1,
+        progressCallback
+      );
+
+      result.push({
+        name: folder,
+        type: 'directory',
+        path: folderPath,
+        children: children,
+        icon: showIcons ? '📁' : null,
+      });
+
+      // Yield control periodically to prevent blocking
+      if (i % 10 === 0) {
+        await new Promise(resolve => setTimeout(resolve, 0));
+      }
+    }
+
+    // Process files with memory management
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      result.push({
+        name: file,
+        type: 'file',
+        path: path.join(currentPath, file),
+        icon: showIcons ? getFileIcon(file) : null,
+      });
+
+      // Yield control periodically to prevent blocking
+      if (i % 50 === 0) {
+        await new Promise(resolve => setTimeout(resolve, 0));
+      }
+    }
+
+    return result;
+  } catch (error) {
+    return [
+      {
+        name: 'Error reading directory',
+        type: 'error',
+        error: String(error),
+      },
+    ];
+  }
 }
