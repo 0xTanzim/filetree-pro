@@ -2,63 +2,67 @@
 
 const fs = require('fs');
 const path = require('path');
-const archiver = require('archiver');
+const { execSync } = require('child_process');
+
+console.log('🚀 Building FileTree Pro Extension...');
 
 // Read package.json
 const packageJson = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+const vsixName = `${packageJson.name}-${packageJson.version}.vsix`;
 
-// Create output directory
-const outDir = 'dist';
-if (!fs.existsSync(outDir)) {
-  fs.mkdirSync(outDir);
-}
-
-// Create the .vsix file
-const output = fs.createWriteStream(
-  path.join(outDir, `${packageJson.name}-${packageJson.version}.vsix`)
-);
-const archive = archiver('zip', {
-  zlib: { level: 9 }, // Sets the compression level
-});
-
-output.on('close', () => {
-  console.log(
-    `✅ Extension packaged successfully: ${packageJson.name}-${packageJson.version}.vsix`
-  );
-  console.log(`📦 File size: ${(archive.pointer() / 1024 / 1024).toFixed(2)} MB`);
-});
-
-archive.on('error', err => {
-  throw err;
-});
-
-archive.pipe(output);
-
-// Add essential files to the archive
-const essentialFiles = ['package.json', 'README.md', 'CHANGELOG.md', 'LICENSE', '.vscodeignore'];
-
-essentialFiles.forEach(file => {
-  if (fs.existsSync(file)) {
-    archive.file(file, { name: file });
+try {
+  // Clean previous builds
+  if (fs.existsSync('temp_package')) {
+    execSync('rm -rf temp_package');
   }
-});
-
-// Add the entire out directory (compiled JavaScript files)
-if (fs.existsSync('out')) {
-  archive.directory('out', 'out');
-}
-
-// Add media directory if it exists
-if (fs.existsSync('media')) {
-  archive.directory('media', 'media');
-}
-
-// Add any other directories that might be needed
-const additionalDirs = ['src'];
-additionalDirs.forEach(dir => {
-  if (fs.existsSync(dir)) {
-    archive.directory(dir, dir);
+  if (fs.existsSync(vsixName)) {
+    fs.unlinkSync(vsixName);
   }
-});
 
-archive.finalize();
+  // Compile TypeScript
+  console.log('📦 Compiling TypeScript...');
+  execSync('npx tsc -p ./', { stdio: 'inherit' });
+
+  // Create package structure
+  console.log('📁 Creating package structure...');
+  execSync('mkdir -p temp_package/extension');
+
+  // Copy essential files
+  const filesToCopy = ['package.json', 'README.md', 'LICENSE'];
+
+  filesToCopy.forEach(file => {
+    if (fs.existsSync(file)) {
+      execSync(`cp ${file} temp_package/extension/`);
+    }
+  });
+
+  // Copy directories
+  const dirsToTopy = ['out', 'media'];
+  dirsToTopy.forEach(dir => {
+    if (fs.existsSync(dir)) {
+      execSync(`cp -r ${dir} temp_package/extension/`);
+    }
+  });
+
+  // Create VSIX package
+  console.log('📦 Creating VSIX package...');
+  execSync(`cd temp_package && zip -r ../${vsixName} extension/`, { stdio: 'inherit' });
+
+  // Clean up
+  execSync('rm -rf temp_package');
+
+  console.log(`✅ Extension packaged successfully: ${vsixName}`);
+
+  // Get file size
+  const stats = fs.statSync(vsixName);
+  const fileSizeInMB = (stats.size / (1024 * 1024)).toFixed(2);
+  console.log(`📦 File size: ${fileSizeInMB} MB`);
+
+  console.log('\n🎯 To install locally:');
+  console.log(`   code --install-extension ${vsixName}`);
+  console.log('\n🎯 To test in development:');
+  console.log('   Press F5 in VS Code to open Extension Development Host');
+} catch (error) {
+  console.error('❌ Error packaging extension:', error.message);
+  process.exit(1);
+}

@@ -5,7 +5,7 @@ import { FileSystemService } from '../services/fileSystemService';
 // Mock vscode module
 jest.mock('vscode');
 
-describe('FileTreeProAI Extension', () => {
+describe('FileTree Pro Extension', () => {
   let fileSystemService: FileSystemService;
   let copilotService: CopilotService;
   let analyticsService: AnalyticsService;

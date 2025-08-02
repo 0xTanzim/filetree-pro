@@ -24,7 +24,7 @@ export class FileSystemService {
   }
 
   private loadConfig(): ExtensionConfig {
-    const config = vscode.workspace.getConfiguration('filetreeproai');
+    const config = vscode.workspace.getConfiguration('filetree-pro');
     return {
       exclude: config.get('exclude', []),
       useCopilot: config.get('useCopilot', true),

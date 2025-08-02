@@ -230,6 +230,14 @@ If you find this extension helpful, consider buying me a coffee! ☕
 
 [![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-%23FFDD00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](https://buymeacoffee.com/tanzimhossain)
 
+## 📞 Contact & Social Media
+
+- **Email**: <tanzimhossain2@gmail.com>
+- **GitHub**: [@0xTanzim](https://github.com/0xTanzim)
+- **LinkedIn**: [@0xtanzim](https://linkedin.com/in/0xtanzim)
+- **Facebook**: [@0xtanzim](https://facebook.com/0xtanzim)
+- **Instagram**: [@0xtanzim](https://instagram.com/0xtanzim)
+
 ---
 
 **Made with ❤️ for the VS Code community**
