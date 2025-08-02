@@ -42,9 +42,7 @@
   },
   "icon": "media/icon.png",
   "main": "./out/extension.js",
-  "activationEvents": [
-    "*"
-  ],
+  "activationEvents": ["onCommand:filetree-pro.generateFileTree"],
   "contributes": {
     "commands": [
       {
