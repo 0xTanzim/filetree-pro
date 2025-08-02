@@ -115,7 +115,11 @@ Automatically excludes common build artifacts:
 2. **Right-click** → "Convert Text to Tree"
 3. **View** the converted tree in a new tab
 
-### Example Input:
+### 📹 Demo Video - How to convert text to tree
+
+[![Text to Tree Conversion](https://img.youtube.com/vi/ixqyyAPhodw/hqdefault.jpg)](https://youtu.be/ixqyyAPhodw)
+
+### Example Input
 
 ```
 src/
@@ -126,7 +130,7 @@ Header.js
 Footer.js
 ```
 
-### Example Output:
+### Example Output
 
 ```
 # File Tree from Text
