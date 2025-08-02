@@ -45,7 +45,7 @@ export class FileTreeProvider implements vscode.TreeDataProvider<FileTreeItem> {
     // Add command for files
     if (element.type === 'file' && element.uri) {
       treeItem.command = {
-        command: 'filetreeproai.openFile',
+        command: 'filetree-pro.openFile',
         title: 'Open File',
         arguments: [element.uri],
       };
