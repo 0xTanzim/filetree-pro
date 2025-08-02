@@ -2,7 +2,7 @@
   "name": "filetree-pro",
   "displayName": "FileTree Pro",
   "description": "A powerful file tree generator for VS Code and Cursor. Generate beautiful file trees in multiple formats with smart exclusions and custom configurations.",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "publisher": "0xtanzim",
   "license": "MIT",
   "author": {
@@ -23,18 +23,28 @@
   },
   "categories": [
     "Other",
-    "Visualization"
+    "Visualization",
+    "file tree",
+    "tree file generator",
+    "productivity"
   ],
   "keywords": [
+    "file",
+    "tree",
+    "filetree",
     "file-tree",
-    "project-explorer",
-    "file-visualization",
-    "productivity",
     "file tree",
-    "project explorer",
-    "folder graph",
-    "visual map",
-    "structure viewer"
+    "folder",
+    "folder tree",
+    "project",
+    "explorer",
+    "visualization",
+    "file explorer",
+    "directory tree",
+    "file tree generator",
+    "file tree generator for vscode",
+    "tree generator",
+    "tree file"
   ],
   "galleryBanner": {
     "color": "#1E1E1E",
@@ -42,12 +52,18 @@
   },
   "icon": "media/icon.png",
   "main": "./out/extension.js",
-  "activationEvents": ["onCommand:filetree-pro.generateFileTree"],
+  "activationEvents": [
+    "onCommand:filetree-pro.generateFileTree"
+  ],
   "contributes": {
     "commands": [
       {
         "command": "filetree-pro.generateFileTree",
         "title": "Generate File Tree"
+      },
+      {
+        "command": "filetree-pro.convertTextToTree",
+        "title": "Convert Text to Tree"
       }
     ],
     "menus": {
@@ -55,6 +71,13 @@
         {
           "command": "filetree-pro.generateFileTree",
           "when": "explorerResourceIsFolder",
+          "group": "navigation@1"
+        }
+      ],
+      "editor/context": [
+        {
+          "command": "filetree-pro.convertTextToTree",
+          "when": "editorHasSelection",
           "group": "navigation@1"
         }
       ]
