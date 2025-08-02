@@ -1,0 +1,23 @@
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="treeGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#4CAF50;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#2E7D32;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+
+  <!-- Tree trunk -->
+  <rect x="10" y="16" width="4" height="8" fill="#8D6E63" rx="1"/>
+
+  <!-- Tree branches -->
+  <path d="M4 12 L8 8 L12 12 L16 8 L20 12 L18 14 L16 12 L12 16 L8 12 L6 14 Z" fill="url(#treeGradient)"/>
+
+  <!-- File icons on branches -->
+  <rect x="6" y="10" width="2" height="2" fill="#FFC107" rx="0.5"/>
+  <rect x="16" y="10" width="2" height="2" fill="#2196F3" rx="0.5"/>
+  <rect x="11" y="13" width="2" height="2" fill="#FF5722" rx="0.5"/>
+
+  <!-- Root folder -->
+  <rect x="9" y="18" width="6" height="4" fill="#795548" rx="1"/>
+  <rect x="10" y="19" width="4" height="2" fill="#5D4037" rx="0.5"/>
+</svg>
