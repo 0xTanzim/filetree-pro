@@ -2,7 +2,7 @@
 
 A powerful file tree generator for VS Code and Cursor. Generate beautiful file trees in multiple formats with smart exclusions and custom configurations.
 
-[![Version](https://img.shields.io/badge/version-0.1.7-blue.svg)](https://marketplace.visualstudio.com/items?itemName=filetree-pro)
+[![Version](https://img.shields.io/badge/version-0.1.8-blue.svg)](https://marketplace.visualstudio.com/items?itemName=filetree-pro)
 [![Downloads](https://img.shields.io/badge/downloads-0-brightgreen.svg)](https://marketplace.visualstudio.com/items?itemName=filetree-pro)
 [![Rating](https://img.shields.io/badge/rating-0.0-yellow.svg)](https://marketplace.visualstudio.com/items?itemName=filetree-pro)
 
