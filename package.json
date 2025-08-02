@@ -2,15 +2,24 @@
   "name": "filetree-pro",
   "displayName": "FileTree Pro",
   "description": "A powerful file tree generator for VS Code and Cursor. Generate beautiful file trees in multiple formats with smart exclusions and custom configurations.",
-  "version": "0.1.0",
-  "icon": "media/icon.png",
+  "version": "0.1.2",
   "publisher": "0xtanzim",
-  "engines": {
-    "vscode": "^1.102.0"
+  "license": "MIT",
+  "author": {
+    "name": "0xTanzim",
+    "email": "tanzimhossain2@gmail.com",
+    "url": "https://github.com/0xTanzim"
   },
+  "homepage": "https://github.com/0xTanzim/filetree-pro",
   "repository": {
     "type": "git",
     "url": "https://github.com/0xTanzim/filetree-pro.git"
+  },
+  "bugs": {
+    "url": "https://github.com/0xTanzim/filetree-pro/issues"
+  },
+  "engines": {
+    "vscode": "^1.102.0"
   },
   "categories": [
     "Other",
@@ -25,59 +34,22 @@
     "project explorer",
     "folder graph",
     "visual map",
-    "structure viewer",
-    "file tree",
-    "project explorer",
-    "folder graph",
-    "visual map",
     "structure viewer"
   ],
   "galleryBanner": {
     "color": "#1E1E1E",
     "theme": "dark"
   },
+  "icon": "media/icon.png",
   "main": "./out/extension.js",
+  "activationEvents": [
+    "*"
+  ],
   "contributes": {
     "commands": [
       {
-        "command": "filetree-pro.refresh",
-        "title": "Refresh File Tree",
-        "icon": "media/icon.png"
-      },
-      {
-        "command": "filetree-pro.search",
-        "title": "Search Files",
-        "icon": "media/icon.png"
-      },
-      {
-        "command": "filetree-pro.export",
-        "title": "Export Tree",
-        "icon": "media/icon.png"
-      },
-      {
-        "command": "filetree-pro.analyze",
-        "title": "Analyze Project",
-        "icon": "media/icon.png"
-      },
-      {
-        "command": "filetree-pro.openFile",
-        "title": "Open File",
-        "icon": "media/icon.png"
-      },
-      {
-        "command": "filetree-pro.copyPath",
-        "title": "Copy Path",
-        "icon": "media/icon.png"
-      },
-      {
-        "command": "filetree-pro.revealInExplorer",
-        "title": "Reveal in Explorer",
-        "icon": "media/icon.png"
-      },
-      {
         "command": "filetree-pro.generateFileTree",
-        "title": "Generate File Tree",
-        "icon": "media/icon.png"
+        "title": "Generate File Tree"
       }
     ],
     "menus": {
@@ -116,36 +88,6 @@
           ],
           "description": "Files and folders to exclude from the file tree"
         },
-        "filetree-pro.useCopilot": {
-          "type": "boolean",
-          "default": true,
-          "description": "Enable AI features using GitHub Copilot (if installed)"
-        },
-        "filetree-pro.maxDepth": {
-          "type": "number",
-          "default": 10,
-          "description": "Maximum depth for file tree expansion"
-        },
-        "filetree-pro.showFileSize": {
-          "type": "boolean",
-          "default": true,
-          "description": "Show file sizes in the tree"
-        },
-        "filetree-pro.showFileDate": {
-          "type": "boolean",
-          "default": false,
-          "description": "Show file modification dates in the tree"
-        },
-        "filetree-pro.enableSearch": {
-          "type": "boolean",
-          "default": true,
-          "description": "Enable search functionality"
-        },
-        "filetree-pro.enableAnalytics": {
-          "type": "boolean",
-          "default": true,
-          "description": "Enable project analytics dashboard"
-        },
         "filetree-pro.showIcons": {
           "type": "boolean",
           "default": true,
@@ -155,19 +97,13 @@
     }
   },
   "scripts": {
+    "vscode:prepublish": "tsc -p ./",
     "compile": "tsc -p ./",
-    "compile:prod": "tsc -p ./ --sourceMap false",
     "build": "webpack --mode=production",
-    "build:dev": "webpack --mode=development",
-    "watch": "webpack --mode=development --watch",
     "test": "jest",
-    "test:watch": "jest --watch",
     "package": "node scripts/package-extension.js",
-    "package:optimized": "npm run build && node scripts/package-extension-optimized.js",
-    "package:vsce": "@vscode/vsce package",
     "publish": "@vscode/vsce publish",
-    "clean": "rm -rf out dist temp_package *.vsix",
-    "dev": "npm run build:dev && code --extensionDevelopmentPath=."
+    "clean": "rm -rf out dist temp_package *.vsix"
   },
   "devDependencies": {
     "@eslint/js": "^9.32.0",
@@ -193,7 +129,7 @@
     "typescript": "5.8.3",
     "webpack": "^5.101.0",
     "webpack-bundle-analyzer": "^4.10.2",
-    "webpack-cli": "^5.1.4"
+    "webpack-cli": "^6.0.1"
   },
   "dependencies": {
     "filesize": "^11.0.0",
@@ -213,5 +149,9 @@
     "hooks": {
       "pre-commit": "lint-staged"
     }
+  },
+  "pricing": "Free",
+  "sponsor": {
+    "url": "https://github.com/sponsors/0xTanzim"
   }
 }
