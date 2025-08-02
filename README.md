@@ -6,6 +6,15 @@ A powerful file tree generator for VS Code and Cursor. Generate beautiful file t
 [![Downloads](https://img.shields.io/badge/downloads-0-brightgreen.svg)](https://marketplace.visualstudio.com/items?itemName=filetree-pro)
 [![Rating](https://img.shields.io/badge/rating-0.0-yellow.svg)](https://marketplace.visualstudio.com/items?itemName=filetree-pro)
 
+## 🎬 Demo Video
+
+<video width="100%" controls>
+  <source src="media/guide.mp4" type="video/mp4">
+  Your browser does not support the video tag.
+</video>
+
+_See FileTree Pro in action: Right-click any folder → Generate beautiful file trees in multiple formats!_
+
 ## ⚙️ Configuration
 
 ### Quick Setup
@@ -95,6 +104,17 @@ Automatically excludes common build artifacts:
 4. **Choose Format**: Select Markdown, JSON, SVG, or ASCII
 5. **Choose Style**: With or without icons
 6. **Save**: The tree opens in an unsaved tab - save when ready!
+
+## 📹 Video Guide
+
+Watch this quick demo to see FileTree Pro in action:
+
+<video width="100%" controls>
+  <source src="media/guide.mp4" type="video/mp4">
+  Your browser does not support the video tag.
+</video>
+
+_Video shows: Right-click on folder → Generate File Tree → Choose format → View beautiful tree output_
 
 ## 📋 Commands
 
