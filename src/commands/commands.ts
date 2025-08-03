@@ -667,59 +667,19 @@ export function shouldExclude(item: string): boolean {
     '.editorconfig',
     '.babelrc',
     '.babelrc.js',
-    'tsconfig.json',
     'tsconfig.build.json',
-    'webpack.config.js',
-    'rollup.config.js',
-    'vite.config.js',
-    'jest.config.js',
     'karma.conf.js',
-    'gulpfile.js',
-    'gruntfile.js',
-    'package.json',
     'package-lock.json',
     'yarn.lock',
     'pnpm-lock.yaml',
-    'composer.json',
     'composer.lock',
-    'Gemfile',
     'Gemfile.lock',
     'requirements.txt',
-    'Pipfile',
+    'Pipfile.lock',
     'poetry.lock',
-    'Cargo.toml',
     'Cargo.lock',
-    'go.mod',
     'go.sum',
-    'mix.exs',
     'mix.lock',
-    'pom.xml',
-    'build.gradle',
-    'build.sbt',
-    'project.clj',
-    'deps.edn',
-    'package.json',
-    'package-lock.json',
-    'yarn.lock',
-    'pnpm-lock.yaml',
-    'composer.json',
-    'composer.lock',
-    'Gemfile',
-    'Gemfile.lock',
-    'requirements.txt',
-    'Pipfile',
-    'poetry.lock',
-    'Cargo.toml',
-    'Cargo.lock',
-    'go.mod',
-    'go.sum',
-    'mix.exs',
-    'mix.lock',
-    'pom.xml',
-    'build.gradle',
-    'build.sbt',
-    'project.clj',
-    'deps.edn',
   ];
 
   // Combine default and user exclusions
@@ -925,7 +885,7 @@ function countNodes(nodes: any[]): number {
   return count;
 }
 
-async function buildTreeData(
+export async function buildTreeData(
   currentPath: string,
   maxDepth: number,
   showIcons: boolean,
@@ -968,7 +928,7 @@ async function buildTreeData(
       const batchResults = await Promise.all(batchPromises);
 
       for (const batchResult of batchResults) {
-        if (batchResult) {
+        if (batchResult && !batchResult.isExcluded) {
           if (batchResult.type === 'folder') {
             folders.push(batchResult.item);
           } else {
