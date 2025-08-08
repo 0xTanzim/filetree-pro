@@ -2,7 +2,7 @@
   "name": "filetree-pro",
   "displayName": "FileTree Pro",
   "description": "A powerful file tree generator for VS Code and Cursor. Generate beautiful file trees in multiple formats with smart exclusions and custom configurations.",
-  "version": "0.1.91",
+  "version": "0.1.92",
   "publisher": "0xtanzim",
   "license": "MIT",
   "author": {
@@ -19,7 +19,7 @@
     "url": "https://github.com/0xTanzim/filetree-pro/issues"
   },
   "engines": {
-    "vscode": ">=1.70.0"
+    "vscode": ">=1.87.0"
   },
   "categories": [
     "Other",
@@ -128,7 +128,7 @@
     "@testing-library/jest-dom": "^6.6.4",
     "@types/jest": "^30.0.0",
     "@types/node": "^24.1.0",
-    "@types/vscode": "^1.102.0",
+    "@types/vscode": "^1.87.0",
     "@typescript-eslint/eslint-plugin": "^8.15.0",
     "@typescript-eslint/parser": "^8.15.0",
     "@vscode/vsce": "^3.6.0",
