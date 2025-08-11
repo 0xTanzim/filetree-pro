@@ -12,7 +12,6 @@ on:
 
 env:
   NODE_VERSION: 24.x
-  PNPM_VERSION: latest
 
 jobs:
   # Stage 1: Build and Test
@@ -30,21 +29,18 @@ jobs:
         node-version: ${{ env.NODE_VERSION }}
         cache: 'npm'
 
-    - name: 📦 Setup pnpm
-      run: npm install -g pnpm@${{ env.PNPM_VERSION }}
-
-    - name: 📥 Install dependencies
-      run: pnpm install --frozen-lockfile
+    - name:  Install dependencies
+      run: npm ci
 
     - name: 🔍 Lint code
-      run: pnpm run lint
+      run: npm run lint
       continue-on-error: true
 
     - name: 🏗️ Compile TypeScript
-      run: pnpm run compile
+      run: npm run compile
 
     - name: ✅ Run tests
-      run: pnpm test
+      run: npm test
 
   # Stage 2: Package Extension
   package:
@@ -67,17 +63,14 @@ jobs:
         node-version: ${{ env.NODE_VERSION }}
         cache: 'npm'
 
-    - name: 📦 Setup pnpm
-      run: npm install -g pnpm@${{ env.PNPM_VERSION }}
-
-    - name: 📥 Install dependencies
-      run: pnpm install --frozen-lockfile
+    - name:  Install dependencies
+      run: npm ci
 
     - name: 📋 Install vsce globally
       run: npm install -g @vscode/vsce
 
     - name: 🏗️ Compile TypeScript
-      run: pnpm run compile
+      run: npm run compile
 
     - name: 📋 Get package info
       id: package-info

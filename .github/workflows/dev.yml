@@ -13,7 +13,6 @@ on:
 
 env:
   NODE_VERSION: 24.x
-  PNPM_VERSION: latest
 
 jobs:
   # Development Testing Only - No Publishing
@@ -31,21 +30,18 @@ jobs:
         node-version: ${{ env.NODE_VERSION }}
         cache: 'npm'
 
-    - name: 📦 Setup pnpm
-      run: npm install -g pnpm@${{ env.PNPM_VERSION }}
-
-    - name: 📥 Install dependencies
-      run: pnpm install --frozen-lockfile
+    - name:  Install dependencies
+      run: npm ci
 
     - name: 🔍 Lint code
-      run: pnpm run lint
+      run: npm run lint
       continue-on-error: true
 
     - name: 🏗️ Compile TypeScript
-      run: pnpm run compile
+      run: npm run compile
 
     - name: ✅ Run tests
-      run: pnpm test
+      run: npm test
 
     - name: 💡 Development Info
       run: |
