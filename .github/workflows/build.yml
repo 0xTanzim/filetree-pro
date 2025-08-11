@@ -1,0 +1,37 @@
+name: Build and Test
+
+on:
+  push:
+    branches:
+      - main
+      - 'dev/*'
+      - 'v2/*'
+  pull_request:
+    branches:
+      - main
+      - 'v2/*'
+      - 'dev/*'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: 🚀 Check out code
+      uses: actions/checkout@v4
+
+    - name: 🛠️ Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '24'
+
+    - name: 📦 Install dependencies
+      run: |
+        npm install -g pnpm@latest
+        pnpm install
+
+    - name: 🏗️ Build the project
+      run: pnpm build
+
+    - name: ✅ Run tests
+      run: pnpm test:run
