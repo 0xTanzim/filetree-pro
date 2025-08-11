@@ -35,7 +35,7 @@ describe('📁 Exclusion Tests', () => {
       ]);
 
       try {
-        const result = await buildTreeData('/test', 10, true, 0);
+        const result = await buildTreeData('/test', 10, true, '/test', 0);
         console.log('Result length:', result.length);
         console.log('Result:', JSON.stringify(result, null, 2));
 
@@ -63,7 +63,7 @@ describe('📁 Exclusion Tests', () => {
         ['main.js', vscode.FileType.File],
       ]);
 
-      const result = await buildTreeData('/test', 10, true, 0);
+      const result = await buildTreeData('/test', 10, true, '/test', 0);
 
       // Should not include .git
       const gitNode = result.find((node: any) => node.name === '.git');
@@ -82,7 +82,7 @@ describe('📁 Exclusion Tests', () => {
         ['index.html', vscode.FileType.File],
       ]);
 
-      const result = await buildTreeData('/test', 10, true, 0);
+      const result = await buildTreeData('/test', 10, true, '/test', 0);
 
       // Should not include dist
       const distNode = result.find((node: any) => node.name === 'dist');
@@ -109,7 +109,7 @@ describe('📁 Exclusion Tests', () => {
           ['index.js', vscode.FileType.File],
         ]);
 
-      const result = await buildTreeData('/test', 10, true, 0);
+      const result = await buildTreeData('/test', 10, true, '/test', 0);
 
       // Should include src folder
       const srcNode = result.find((node: any) => node.name === 'src');

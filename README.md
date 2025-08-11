@@ -36,6 +36,7 @@ Add this to your VS Code settings (`Ctrl/Cmd + ,`):
     "**/*.tmp"
   ],
   "filetree-pro.showIcons": true,
+  "filetree-pro.respectGitignore": true,
   "filetree-pro.useCopilot": false
 }
 ```
@@ -83,8 +84,9 @@ Add your own patterns to exclude files/folders:
 
 ### 🛡️ Smart Exclusions
 
-Automatically excludes common build artifacts:
+Automatically excludes common build artifacts and **respects .gitignore files**:
 
+- **Respect .gitignore**: Honors your project's .gitignore patterns
 - `node_modules`, `dist`, `build`, `out`
 - `.git`, `.venv`, `venv`, `env`
 - `*.log`, `*.tmp`, `*.cache`
@@ -198,6 +200,16 @@ _Video shows: Right-click on folder → Generate File Tree → Choose format →
 ```
 
 ## 🔧 Advanced Configuration
+
+### .gitignore Support
+
+```json
+{
+  "filetree-pro.respectGitignore": true
+}
+```
+
+Automatically respects your project's `.gitignore` patterns when generating file trees. Enabled by default.
 
 ### Custom Exclusions
 

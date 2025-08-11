@@ -197,6 +197,7 @@ export async function generateTreeLines(
   depth: number,
   maxDepth: number,
   showIcons: boolean,
+  rootPath: string,
   progressCallback?: (message: string) => void
 ): Promise<void> {
   if (depth > maxDepth) {
@@ -223,7 +224,7 @@ export async function generateTreeLines(
       // Process batch asynchronously
       const batchPromises = batch.map(async ([item, fileType]) => {
         const itemPath = path.join(currentPath, item);
-        const isExcluded = shouldExclude(item, itemPath);
+        const isExcluded = shouldExclude(item, itemPath, rootPath);
 
         if (fileType === vscode.FileType.Directory) {
           return { item, type: 'folder' as const, isExcluded };
@@ -269,7 +270,7 @@ export async function generateTreeLines(
 
       // Check if folder is excluded
       const folderPath = path.join(currentPath, folder);
-      const isExcluded = shouldExclude(folder, folderPath);
+      const isExcluded = shouldExclude(folder, folderPath, rootPath);
       const exclusionIndicator = isExcluded ? ' 🚫 (auto-hidden)' : '';
 
       lines.push(`${prefix}${connector}${showIcons ? '📁 ' : ''}${folder}/${exclusionIndicator}`);
@@ -283,6 +284,7 @@ export async function generateTreeLines(
           depth + 1,
           maxDepth,
           showIcons,
+          rootPath,
           progressCallback
         );
       }
@@ -301,7 +303,7 @@ export async function generateTreeLines(
 
       // Check if file is excluded
       const filePath = path.join(currentPath, file);
-      const isExcluded = shouldExclude(file, filePath);
+      const isExcluded = shouldExclude(file, filePath, rootPath);
       const exclusionIndicator = isExcluded ? ' 🚫 (auto-hidden)' : '';
 
       // Get file icon based on extension
@@ -589,10 +591,21 @@ function globToRegex(pattern: string): RegExp {
   return new RegExp(regexPattern, 'i');
 }
 
-export function shouldExclude(item: string, fullPath?: string): boolean {
+export async function shouldExcludeWithGitignore(
+  item: string,
+  fullPath?: string,
+  rootPath?: string
+): Promise<boolean> {
   // Get user-defined exclusions from settings
   const config = vscode.workspace.getConfiguration('filetree-pro');
   const userExclusions = config.get<string[]>('exclude', []);
+  const respectGitignore = config.get<boolean>('respectGitignore', true);
+
+  // Read .gitignore patterns if enabled
+  let gitignorePatterns: string[] = [];
+  if (respectGitignore && rootPath) {
+    gitignorePatterns = await readGitignore(rootPath);
+  }
 
   // Common folders and files to exclude
   const defaultExcludePatterns = [
@@ -682,8 +695,8 @@ export function shouldExclude(item: string, fullPath?: string): boolean {
     'karma.conf.js',
   ];
 
-  // Combine default and user exclusions
-  const excludePatterns = [...defaultExcludePatterns, ...userExclusions];
+  // Combine default, user, and gitignore exclusions
+  const excludePatterns = [...defaultExcludePatterns, ...userExclusions, ...gitignorePatterns];
 
   const itemLower = item.toLowerCase();
 
@@ -698,6 +711,189 @@ export function shouldExclude(item: string, fullPath?: string): boolean {
     excludePatterns.some(pattern => {
       // Skip glob patterns for exact match check
       if (pattern.includes('*') || pattern.includes('/')) {
+        return false;
+      }
+      return pattern.toLowerCase() === itemLower;
+    })
+  ) {
+    return true;
+  }
+
+  // Check wildcard and glob patterns
+  for (const pattern of excludePatterns) {
+    if (pattern.includes('*') || pattern.includes('/')) {
+      try {
+        // Handle file extension patterns like *.log, *.tmp first (simple case)
+        if (pattern.startsWith('*.') && !pattern.includes('/')) {
+          const extension = pattern.substring(1); // Remove the * to get .log, .tmp, etc.
+          if (item.toLowerCase().endsWith(extension.toLowerCase())) {
+            return true;
+          }
+        } else {
+          // Handle complex glob patterns like **/node_modules/**, **/*.log, etc.
+          const regex = globToRegex(pattern);
+          if (regex.test(normalizedPath) || regex.test(item)) {
+            return true;
+          }
+        }
+      } catch (error) {
+        // If there's an error with the pattern, log it and continue
+        console.warn(`Invalid exclusion pattern: ${pattern}`, error);
+        continue;
+      }
+    }
+  }
+
+  // Check for common build/artifact patterns (only exact matches)
+  if (
+    itemLower === 'build' ||
+    itemLower === 'dist' ||
+    itemLower === 'cache' ||
+    itemLower === 'temp' ||
+    itemLower === 'tmp'
+  ) {
+    return true;
+  }
+
+  return false;
+}
+
+export function shouldExclude(item: string, fullPath?: string, rootPath?: string): boolean {
+  // Get user-defined exclusions from settings
+  const config = vscode.workspace.getConfiguration('filetree-pro');
+  const userExclusions = config.get<string[]>('exclude', []);
+  const respectGitignore = config.get<boolean>('respectGitignore', true);
+
+  // Read .gitignore patterns if enabled (synchronously for now)
+  let gitignorePatterns: string[] = [];
+  if (respectGitignore && rootPath) {
+    try {
+      const gitignorePath = path.join(rootPath, '.gitignore');
+      const fs = require('fs');
+      if (fs.existsSync(gitignorePath)) {
+        const content = fs.readFileSync(gitignorePath, 'utf8');
+        gitignorePatterns = content
+          .split('\n')
+          .filter((line: string) => line.trim() && !line.startsWith('#'))
+          .map((line: string) => line.trim());
+      }
+    } catch (error) {
+      // Ignore errors and continue without gitignore
+    }
+  }
+
+  // Common folders and files to exclude
+  const defaultExcludePatterns = [
+    // Build and dependency folders
+    'node_modules',
+    'dist',
+    'build',
+    'out',
+    'target',
+    'bin',
+    'obj',
+    '.next',
+    '.nuxt',
+    '.output',
+    'coverage',
+    'coverage.lcov',
+    '.nyc_output',
+    'lib',
+    'libs',
+    'vendor',
+    'bower_components',
+    'jspm_packages',
+
+    // Version control
+    '.git',
+    '.svn',
+    '.hg',
+    '.bzr',
+
+    // IDE and editor folders
+    '.vscode',
+    '.idea',
+    '.vs',
+    '.cursor',
+    '.atom',
+    '.sublime-project',
+    '.sublime-workspace',
+
+    // Environment files (sensitive)
+    '.env.local',
+    '.env.production',
+    '.env.development',
+    '.env.test',
+    'venv',
+    '.venv',
+    'env',
+    '.python-version',
+    '.ruby-version',
+    '.node-version',
+
+    // OS generated
+    '.DS_Store',
+    'Thumbs.db',
+    '.Trash',
+    'desktop.ini',
+    '$RECYCLE.BIN',
+
+    // Logs and temp files
+    '*.log',
+    '*.tmp',
+    '*.cache',
+    '*.pyc',
+    '__pycache__',
+    '*.swp',
+    '*.swo',
+    '*~',
+
+    // Package manager lock files (often needed for debugging/reproducible builds)
+    // Note: These are sometimes committed and needed, so being more selective
+    'composer.lock',
+    'Gemfile.lock',
+    'Pipfile.lock',
+    'mix.lock',
+
+    // Build artifacts
+    '*.min.js',
+    '*.min.css',
+    '*.map',
+    '*.bundle.js',
+    '*.chunk.js',
+
+    // Generated/config files (commonly auto-generated but sometimes important)
+    '.eslintcache',
+    '.babelrc',
+    '.babelrc.js',
+    'tsconfig.build.json',
+    'karma.conf.js',
+  ];
+
+  // Combine default, user, and gitignore exclusions
+  const excludePatterns = [...defaultExcludePatterns, ...userExclusions, ...gitignorePatterns];
+
+  const itemLower = item.toLowerCase();
+
+  // For user patterns with glob syntax (like **/node_modules/**), we need the full path
+  const pathToCheck = fullPath || item;
+
+  // Normalize path separators for cross-platform compatibility
+  const normalizedPath = pathToCheck.replace(/\\/g, '/');
+
+  // Check exact matches (case-insensitive) - for simple patterns
+  if (
+    excludePatterns.some(pattern => {
+      // Skip glob patterns for exact match check
+      if (pattern.includes('*')) {
+        return false;
+      }
+      // Handle directory patterns ending with /
+      if (pattern.endsWith('/')) {
+        return pattern.slice(0, -1).toLowerCase() === itemLower;
+      }
+      // Skip patterns with / that aren't at the end
+      if (pattern.includes('/')) {
         return false;
       }
       return pattern.toLowerCase() === itemLower;
@@ -762,7 +958,7 @@ export async function generateMarkdownTree(
   lines.push('```');
 
   // Generate tree structure
-  await generateTreeLines(rootPath, '', lines, 0, maxDepth, showIcons, progressCallback);
+  await generateTreeLines(rootPath, '', lines, 0, maxDepth, showIcons, rootPath, progressCallback);
 
   lines.push('```');
   lines.push('');
@@ -778,7 +974,14 @@ export async function generateJsonTree(
   showIcons: boolean,
   progressCallback?: (message: string) => void
 ): Promise<string> {
-  const treeData = await buildTreeData(rootPath, maxDepth, showIcons, 0, progressCallback);
+  const treeData = await buildTreeData(
+    rootPath,
+    maxDepth,
+    showIcons,
+    rootPath,
+    0,
+    progressCallback
+  );
 
   const jsonOutput = {
     name: path.basename(rootPath),
@@ -800,7 +1003,14 @@ export async function generateSvgTree(
   showIcons: boolean,
   progressCallback?: (message: string) => void
 ): Promise<string> {
-  const treeData = await buildTreeData(rootPath, maxDepth, showIcons, 0, progressCallback);
+  const treeData = await buildTreeData(
+    rootPath,
+    maxDepth,
+    showIcons,
+    rootPath,
+    0,
+    progressCallback
+  );
 
   // Calculate dimensions based on content
   const nodeCount = countNodes(treeData);
@@ -895,7 +1105,7 @@ export async function generateAsciiTree(
   lines.push('─'.repeat(80));
 
   // Generate tree structure
-  await generateTreeLines(rootPath, '', lines, 0, maxDepth, showIcons, progressCallback);
+  await generateTreeLines(rootPath, '', lines, 0, maxDepth, showIcons, rootPath, progressCallback);
 
   lines.push('');
   lines.push('─'.repeat(80));
@@ -918,6 +1128,7 @@ export async function buildTreeData(
   currentPath: string,
   maxDepth: number,
   showIcons: boolean,
+  rootPath: string,
   depth: number = 0,
   progressCallback?: (message: string) => void
 ): Promise<any[]> {
@@ -946,7 +1157,7 @@ export async function buildTreeData(
       // Process batch asynchronously
       const batchPromises = batch.map(async ([item, fileType]) => {
         const itemPath = path.join(currentPath, item);
-        const isExcluded = shouldExclude(item, itemPath);
+        const isExcluded = shouldExclude(item, itemPath, rootPath);
 
         if (fileType === vscode.FileType.Directory) {
           return { item, type: 'folder' as const, isExcluded };
@@ -991,6 +1202,7 @@ export async function buildTreeData(
         folderPath,
         maxDepth,
         showIcons,
+        rootPath,
         depth + 1,
         progressCallback
       );

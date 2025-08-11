@@ -1,0 +1,54 @@
+name: Development Testing
+
+on:
+  push:
+    branches:
+      - 'dev/*'
+      - 'feature/*'
+      - 'v2/*'
+  pull_request:
+    branches:
+      - 'dev/*'
+      - 'feature/*'
+
+env:
+  NODE_VERSION: 24.x
+  PNPM_VERSION: latest
+
+jobs:
+  # Development Testing Only - No Publishing
+  dev-test:
+    name: 🧪 Development Testing
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: 🚀 Checkout repository
+      uses: actions/checkout@v4
+
+    - name: 🛠️ Setup Node.js ${{ env.NODE_VERSION }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+
+    - name: 📦 Setup pnpm
+      run: npm install -g pnpm@${{ env.PNPM_VERSION }}
+
+    - name: 📥 Install dependencies
+      run: pnpm install --frozen-lockfile
+
+    - name: 🔍 Lint code
+      run: pnpm run lint
+      continue-on-error: true
+
+    - name: 🏗️ Compile TypeScript
+      run: pnpm run compile
+
+    - name: ✅ Run tests
+      run: pnpm test
+
+    - name: 💡 Development Info
+      run: |
+        echo "🔧 Development branch testing complete!"
+        echo "📝 This workflow only runs tests - no publishing happens from dev branches"
+        echo "🚀 To publish: merge to main, then create a GitHub release"
