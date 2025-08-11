@@ -145,10 +145,125 @@ describe('📁 Exclusion Tests', () => {
       expect(shouldExclude('src')).toBe(false);
     });
 
+    it('should not exclude important config files', () => {
+      // These should NOT be auto-hidden as they are commonly needed
+      expect(shouldExclude('.env')).toBe(false);
+      expect(shouldExclude('.gitignore')).toBe(false);
+      expect(shouldExclude('.prettierignore')).toBe(false);
+      expect(shouldExclude('pnpm-lock.yaml')).toBe(false);
+      expect(shouldExclude('.gitattributes')).toBe(false);
+      expect(shouldExclude('.editorconfig')).toBe(false);
+    });
+
+    it('should not exclude TypeScript files with "log" in the name', () => {
+      // Regression test for issue #5 - files with "log" in name should not be excluded
+      expect(shouldExclude('requestLogger.ts')).toBe(false);
+      expect(shouldExclude('errorLogger.js')).toBe(false);
+      expect(shouldExclude('logger.py')).toBe(false);
+      expect(shouldExclude('blogPost.md')).toBe(false);
+    });
+
+    it('should still exclude actual log files', () => {
+      // These should still be excluded as they are log files
+      expect(shouldExclude('error.log')).toBe(true);
+      expect(shouldExclude('app.log')).toBe(true);
+      expect(shouldExclude('debug.log')).toBe(true);
+      expect(shouldExclude('access.log')).toBe(true);
+    });
+
+    it('should handle multi-language project files correctly', () => {
+      // Python files that should be visible
+      expect(shouldExclude('requirements.txt')).toBe(false);
+      expect(shouldExclude('setup.py')).toBe(false);
+      expect(shouldExclude('logger.py')).toBe(false);
+      expect(shouldExclude('logging_config.py')).toBe(false);
+
+      // Go files that should be visible
+      expect(shouldExclude('go.mod')).toBe(false);
+      expect(shouldExclude('go.sum')).toBe(false);
+      expect(shouldExclude('logger.go')).toBe(false);
+
+      // Rust files that should be visible
+      expect(shouldExclude('Cargo.toml')).toBe(false);
+      expect(shouldExclude('Cargo.lock')).toBe(false);
+      expect(shouldExclude('logger.rs')).toBe(false);
+
+      // Java files that should be visible
+      expect(shouldExclude('pom.xml')).toBe(false);
+      expect(shouldExclude('build.gradle')).toBe(false);
+      expect(shouldExclude('Logger.java')).toBe(false);
+      expect(shouldExclude('LoggerFactory.java')).toBe(false);
+
+      // C# files that should be visible
+      expect(shouldExclude('project.csproj')).toBe(false);
+      expect(shouldExclude('solution.sln')).toBe(false);
+      expect(shouldExclude('Logger.cs')).toBe(false);
+
+      // PHP files that should be visible
+      expect(shouldExclude('composer.json')).toBe(false);
+      expect(shouldExclude('logger.php')).toBe(false);
+
+      // Ruby files that should be visible
+      expect(shouldExclude('Gemfile')).toBe(false);
+      expect(shouldExclude('logger.rb')).toBe(false);
+    });
+
+    it('should handle JavaScript/TypeScript ecosystem files correctly', () => {
+      // Lock files that should now be visible for debugging
+      expect(shouldExclude('package-lock.json')).toBe(false);
+      expect(shouldExclude('yarn.lock')).toBe(false);
+      expect(shouldExclude('pnpm-lock.yaml')).toBe(false);
+      expect(shouldExclude('poetry.lock')).toBe(false);
+
+      // Config files that should be visible
+      expect(shouldExclude('tsconfig.json')).toBe(false);
+      expect(shouldExclude('webpack.config.js')).toBe(false);
+      expect(shouldExclude('vite.config.js')).toBe(false);
+      expect(shouldExclude('.eslintrc.json')).toBe(false);
+    });
+
     it('should handle case-insensitive matching', () => {
       expect(shouldExclude('NODE_MODULES')).toBe(true);
       expect(shouldExclude('Node_Modules')).toBe(true);
       expect(shouldExclude('.GIT')).toBe(true);
+    });
+
+    it('should handle complex glob patterns (issue #5)', () => {
+      // These are the patterns that were causing errors
+      expect(shouldExclude('node_modules', '/project/node_modules')).toBe(true);
+      expect(shouldExclude('dist', '/project/dist')).toBe(true);
+      expect(shouldExclude('.git', '/project/.git')).toBe(true);
+      expect(shouldExclude('.venv', '/project/.venv')).toBe(true);
+      expect(shouldExclude('build', '/project/build')).toBe(true);
+      expect(shouldExclude('coverage', '/project/coverage')).toBe(true);
+
+      // Test files with .log extension
+      expect(shouldExclude('app.log', '/project/logs/app.log')).toBe(true);
+      expect(shouldExclude('error.log', '/project/error.log')).toBe(true);
+
+      // Test files with .tmp extension
+      expect(shouldExclude('temp.tmp', '/project/temp.tmp')).toBe(true);
+      expect(shouldExclude('cache.tmp', '/project/cache/cache.tmp')).toBe(true);
+    });
+
+    it('should handle nested path patterns correctly', () => {
+      // Test patterns like **/node_modules/** would match
+      expect(shouldExclude('node_modules', '/deep/nested/path/node_modules')).toBe(true);
+      expect(shouldExclude('dist', '/src/components/dist')).toBe(true);
+
+      // But regular files in those paths should not be excluded just for being there
+      expect(shouldExclude('index.js', '/project/src/index.js')).toBe(false);
+      expect(shouldExclude('component.tsx', '/project/src/components/component.tsx')).toBe(false);
+    });
+
+    it('should not throw errors with complex user exclusion patterns', () => {
+      // This should not throw an error (was the main issue)
+      expect(() => {
+        shouldExclude('node_modules', '/project/node_modules');
+        shouldExclude('test.log', '/project/logs/test.log');
+        shouldExclude('temp.tmp', '/project/temp/temp.tmp');
+        shouldExclude('regular.js', '/project/src/regular.js');
+      }).not.toThrow();
     });
   });
 });

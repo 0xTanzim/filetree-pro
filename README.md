@@ -2,9 +2,10 @@
 
 A powerful file tree generator for VS Code and Cursor. Generate beautiful file trees in multiple formats with smart exclusions and custom configurations.
 
-[![Version](https://img.shields.io/badge/version-0.1.8-blue.svg)](https://marketplace.visualstudio.com/items?itemName=filetree-pro)
-[![Downloads](https://img.shields.io/badge/downloads-0-brightgreen.svg)](https://marketplace.visualstudio.com/items?itemName=filetree-pro)
-[![Rating](https://img.shields.io/badge/rating-0.0-yellow.svg)](https://marketplace.visualstudio.com/items?itemName=filetree-pro)
+[![Version](https://img.shields.io/visual-studio-marketplace/v/0xtanzim.filetree-pro?style=flat-square&label=version&color=blue)](https://marketplace.visualstudio.com/items?itemName=0xtanzim.filetree-pro)
+[![Downloads](https://img.shields.io/visual-studio-marketplace/d/0xtanzim.filetree-pro?style=flat-square&label=downloads&color=brightgreen)](https://marketplace.visualstudio.com/items?itemName=0xtanzim.filetree-pro)
+[![Rating](https://img.shields.io/visual-studio-marketplace/r/0xtanzim.filetree-pro?style=flat-square&label=rating&color=yellow)](https://marketplace.visualstudio.com/items?itemName=0xtanzim.filetree-pro)
+[![Installs](https://img.shields.io/visual-studio-marketplace/i/0xtanzim.filetree-pro?style=flat-square&label=installs&color=orange)](https://marketplace.visualstudio.com/items?itemName=0xtanzim.filetree-pro)
 
 ## 📹 Demo Videos
 
@@ -257,26 +258,6 @@ _Video shows: Right-click on folder → Generate File Tree → Choose format →
 - **Small Projects** (< 1,000 files): < 1 second
 - **Medium Projects** (1,000-10,000 files): < 3 seconds
 - **Large Projects** (10,000+ files): < 10 seconds
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests for new features
-5. Submit a pull request
-
-## 📝 Changelog
-
-### v0.1.0
-
-- ✅ Core file tree generation
-- ✅ 4 output formats (Markdown, JSON, SVG, ASCII)
-- ✅ Universal language support (50+ languages)
-- ✅ Smart exclusions system
-- ✅ Custom configuration support
-- ✅ Performance optimizations
-- ✅ VS Code and Cursor compatibility
 
 ## 📄 License
 

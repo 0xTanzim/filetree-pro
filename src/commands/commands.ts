@@ -222,7 +222,8 @@ export async function generateTreeLines(
 
       // Process batch asynchronously
       const batchPromises = batch.map(async ([item, fileType]) => {
-        const isExcluded = shouldExclude(item);
+        const itemPath = path.join(currentPath, item);
+        const isExcluded = shouldExclude(item, itemPath);
 
         if (fileType === vscode.FileType.Directory) {
           return { item, type: 'folder' as const, isExcluded };
@@ -267,7 +268,8 @@ export async function generateTreeLines(
       const newPrefix = prefix + (isLast ? '    ' : '│   ');
 
       // Check if folder is excluded
-      const isExcluded = shouldExclude(folder);
+      const folderPath = path.join(currentPath, folder);
+      const isExcluded = shouldExclude(folder, folderPath);
       const exclusionIndicator = isExcluded ? ' 🚫 (auto-hidden)' : '';
 
       lines.push(`${prefix}${connector}${showIcons ? '📁 ' : ''}${folder}/${exclusionIndicator}`);
@@ -298,7 +300,8 @@ export async function generateTreeLines(
       const connector = isLast ? '└── ' : '├── ';
 
       // Check if file is excluded
-      const isExcluded = shouldExclude(file);
+      const filePath = path.join(currentPath, file);
+      const isExcluded = shouldExclude(file, filePath);
       const exclusionIndicator = isExcluded ? ' 🚫 (auto-hidden)' : '';
 
       // Get file icon based on extension
@@ -568,7 +571,25 @@ export async function readGitignore(rootPath: string): Promise<string[]> {
   }
 }
 
-export function shouldExclude(item: string): boolean {
+// Helper function to convert glob patterns to regex
+function globToRegex(pattern: string): RegExp {
+  // Escape special regex characters except for our glob patterns
+  let regexPattern = pattern
+    .replace(/[.+^${}()|[\]\\]/g, '\\$&') // Escape regex special chars
+    .replace(/\\\*/g, '__STAR__') // Temporarily replace escaped asterisks
+    .replace(/\*\*/g, '.*') // ** means match any path segment(s)
+    .replace(/__STAR__/g, '[^/]*') // * means match any characters except path separator
+    .replace(/\\\?/g, '.'); // ? means match any single character
+
+  // Ensure the pattern matches the full path for ** patterns
+  if (pattern.includes('**/')) {
+    regexPattern = `(^|/)${regexPattern}(/|$)`;
+  }
+
+  return new RegExp(regexPattern, 'i');
+}
+
+export function shouldExclude(item: string, fullPath?: string): boolean {
   // Get user-defined exclusions from settings
   const config = vscode.workspace.getConfiguration('filetree-pro');
   const userExclusions = config.get<string[]>('exclude', []);
@@ -610,8 +631,7 @@ export function shouldExclude(item: string): boolean {
     '.sublime-project',
     '.sublime-workspace',
 
-    // Environment and config
-    '.env',
+    // Environment files (sensitive)
     '.env.local',
     '.env.production',
     '.env.development',
@@ -640,16 +660,11 @@ export function shouldExclude(item: string): boolean {
     '*.swo',
     '*~',
 
-    // Package managers
-    'package-lock.json',
-    'yarn.lock',
-    'pnpm-lock.yaml',
+    // Package manager lock files (often needed for debugging/reproducible builds)
+    // Note: These are sometimes committed and needed, so being more selective
     'composer.lock',
     'Gemfile.lock',
     'Pipfile.lock',
-    'poetry.lock',
-    'Cargo.lock',
-    'go.sum',
     'mix.lock',
 
     // Build artifacts
@@ -659,27 +674,12 @@ export function shouldExclude(item: string): boolean {
     '*.bundle.js',
     '*.chunk.js',
 
-    // Generated files
+    // Generated/config files (commonly auto-generated but sometimes important)
     '.eslintcache',
-    '.prettierignore',
-    '.gitignore',
-    '.gitattributes',
-    '.editorconfig',
     '.babelrc',
     '.babelrc.js',
     'tsconfig.build.json',
     'karma.conf.js',
-    'package-lock.json',
-    'yarn.lock',
-    'pnpm-lock.yaml',
-    'composer.lock',
-    'Gemfile.lock',
-    'requirements.txt',
-    'Pipfile.lock',
-    'poetry.lock',
-    'Cargo.lock',
-    'go.sum',
-    'mix.lock',
   ];
 
   // Combine default and user exclusions
@@ -687,17 +687,46 @@ export function shouldExclude(item: string): boolean {
 
   const itemLower = item.toLowerCase();
 
-  // Check exact matches (case-insensitive)
-  if (excludePatterns.some(pattern => pattern.toLowerCase() === itemLower)) {
+  // For user patterns with glob syntax (like **/node_modules/**), we need the full path
+  const pathToCheck = fullPath || item;
+
+  // Normalize path separators for cross-platform compatibility
+  const normalizedPath = pathToCheck.replace(/\\/g, '/');
+
+  // Check exact matches (case-insensitive) - for simple patterns
+  if (
+    excludePatterns.some(pattern => {
+      // Skip glob patterns for exact match check
+      if (pattern.includes('*') || pattern.includes('/')) {
+        return false;
+      }
+      return pattern.toLowerCase() === itemLower;
+    })
+  ) {
     return true;
   }
 
-  // Check wildcard patterns (case-insensitive)
+  // Check wildcard and glob patterns
   for (const pattern of excludePatterns) {
-    if (pattern.includes('*')) {
-      const regex = new RegExp(pattern.replace('*', '.*'), 'i'); // 'i' flag for case-insensitive
-      if (regex.test(item)) {
-        return true;
+    if (pattern.includes('*') || pattern.includes('/')) {
+      try {
+        // Handle file extension patterns like *.log, *.tmp first (simple case)
+        if (pattern.startsWith('*.') && !pattern.includes('/')) {
+          const extension = pattern.substring(1); // Remove the * to get .log, .tmp, etc.
+          if (item.toLowerCase().endsWith(extension.toLowerCase())) {
+            return true;
+          }
+        } else {
+          // Handle complex glob patterns like **/node_modules/**, **/*.log, etc.
+          const regex = globToRegex(pattern);
+          if (regex.test(normalizedPath) || regex.test(item)) {
+            return true;
+          }
+        }
+      } catch (error) {
+        // If there's an error with the pattern, log it and continue
+        console.warn(`Invalid exclusion pattern: ${pattern}`, error);
+        continue;
       }
     }
   }
@@ -916,7 +945,8 @@ export async function buildTreeData(
 
       // Process batch asynchronously
       const batchPromises = batch.map(async ([item, fileType]) => {
-        const isExcluded = shouldExclude(item);
+        const itemPath = path.join(currentPath, item);
+        const isExcluded = shouldExclude(item, itemPath);
 
         if (fileType === vscode.FileType.Directory) {
           return { item, type: 'folder' as const, isExcluded };
