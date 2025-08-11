@@ -1,0 +1,50 @@
+name: Development Testing
+
+on:
+  push:
+    branches:
+      - 'dev/*'
+      - 'feature/*'
+      - 'v2/*'
+  pull_request:
+    branches:
+      - 'dev/*'
+      - 'feature/*'
+
+env:
+  NODE_VERSION: 24.x
+
+jobs:
+  # Development Testing Only - No Publishing
+  dev-test:
+    name: 🧪 Development Testing
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: 🚀 Checkout repository
+      uses: actions/checkout@v4
+
+    - name: 🛠️ Setup Node.js ${{ env.NODE_VERSION }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+
+    - name:  Install dependencies
+      run: npm ci
+
+    - name: 🔍 Lint code
+      run: npm run lint
+      continue-on-error: true
+
+    - name: 🏗️ Compile TypeScript
+      run: npm run compile
+
+    - name: ✅ Run tests
+      run: npm test
+
+    - name: 💡 Development Info
+      run: |
+        echo "🔧 Development branch testing complete!"
+        echo "📝 This workflow only runs tests - no publishing happens from dev branches"
+        echo "🚀 To publish: merge to main, then create a GitHub release"

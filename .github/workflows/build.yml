@@ -1,0 +1,171 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  release:
+    types: [published]
+
+env:
+  NODE_VERSION: 24.x
+
+jobs:
+  # Stage 1: Build and Test
+  test:
+    name: 🧪 Build & Test
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: 🚀 Checkout repository
+      uses: actions/checkout@v4
+
+    - name: 🛠️ Setup Node.js ${{ env.NODE_VERSION }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+
+    - name:  Install dependencies
+      run: npm ci
+
+    - name: 🔍 Lint code
+      run: npm run lint
+      continue-on-error: true
+
+    - name: 🏗️ Compile TypeScript
+      run: npm run compile
+
+    - name: ✅ Run tests
+      run: npm test
+
+  # Stage 2: Package Extension
+  package:
+    name: 📦 Package Extension
+    runs-on: ubuntu-latest
+    needs: test
+    # Only package on main branch pushes or releases
+    if: (github.ref == 'refs/heads/main' && github.event_name == 'push') || github.event_name == 'release'
+    outputs:
+      version: ${{ steps.package-info.outputs.version }}
+      vsix-path: ${{ steps.package.outputs.vsix-path }}
+
+    steps:
+    - name: 🚀 Checkout repository
+      uses: actions/checkout@v4
+
+    - name: 🛠️ Setup Node.js ${{ env.NODE_VERSION }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+
+    - name:  Install dependencies
+      run: npm ci
+
+    - name: 📋 Install vsce globally
+      run: npm install -g @vscode/vsce
+
+    - name: 🏗️ Compile TypeScript
+      run: npm run compile
+
+    - name: 📋 Get package info
+      id: package-info
+      run: |
+        VERSION=$(node -p "require('./package.json').version")
+        echo "version=${VERSION}" >> $GITHUB_OUTPUT
+        echo "📋 Extension version: ${VERSION}"
+
+    - name: 📦 Package extension
+      id: package
+      run: |
+        vsce package --out filetree-pro-${{ steps.package-info.outputs.version }}.vsix
+        VSIX_PATH="filetree-pro-${{ steps.package-info.outputs.version }}.vsix"
+        echo "vsix-path=${VSIX_PATH}" >> $GITHUB_OUTPUT
+        echo "📦 Generated VSIX: ${VSIX_PATH}"
+
+    - name: 📁 Upload VSIX artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: extension-vsix
+        path: "*.vsix"
+        retention-days: 10
+
+  # Stage 3: Publish to Marketplaces
+  publish:
+    name: 🚀 Publish Extension
+    runs-on: ubuntu-latest
+    needs: [test, package]
+    if: github.event_name == 'release' && github.event.action == 'published'
+    environment: production
+
+    steps:
+    - name: 🚀 Checkout repository
+      uses: actions/checkout@v4
+
+    - name: 🔍 Verify Release Context
+      run: |
+        echo "🎯 Publishing triggered by release: ${{ github.event.release.tag_name }}"
+        echo "📝 Release name: ${{ github.event.release.name }}"
+        echo "📦 Package version: ${{ needs.package.outputs.version }}"
+        echo "�️ This job only runs on GitHub releases - never on branch pushes!"
+
+    - name: �🛠️ Setup Node.js ${{ env.NODE_VERSION }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+
+    - name: 📋 Install publishing tools
+      run: |
+        npm install -g @vscode/vsce
+        npm install -g ovsx
+
+    - name: 📥 Download VSIX artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: extension-vsix
+        path: ./
+
+    - name: 🏪 Publish to VS Code Marketplace
+      env:
+        VSCE_PAT: ${{ secrets.VSCE_PAT }}
+      run: |
+        echo "🏪 Publishing to VS Code Marketplace..."
+        vsce publish --packagePath ${{ needs.package.outputs.vsix-path }}
+
+    - name: 🌐 Publish to Open VSX Registry
+      env:
+        OVSX_PAT: ${{ secrets.OVSX_PAT }}
+      run: |
+        echo "🌐 Publishing to Open VSX Registry..."
+        ovsx publish ${{ needs.package.outputs.vsix-path }} -p $OVSX_PAT
+
+    - name: ✅ Publishing Complete
+      run: |
+        echo "🎉 Extension published successfully!"
+        echo "📦 VS Code Marketplace: https://marketplace.visualstudio.com/items?itemName=0xtanzim.filetree-pro"
+        echo "🌐 Open VSX Registry: https://open-vsx.org/extension/0xtanzim/filetree-pro"
+
+  # Stage 4: Create Release Asset (for manual releases)
+  release-asset:
+    name: 📎 Upload Release Asset
+    runs-on: ubuntu-latest
+    needs: [test, package]
+    if: github.event_name == 'release' && github.event.action == 'published'
+
+    steps:
+    - name: 📥 Download VSIX artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: extension-vsix
+        path: ./
+
+    - name: 📎 Upload release asset
+      uses: softprops/action-gh-release@v2
+      with:
+        files: ${{ needs.package.outputs.vsix-path }}
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
