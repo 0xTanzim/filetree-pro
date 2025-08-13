@@ -1,3 +1,4 @@
+import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
 
@@ -573,7 +574,24 @@ export async function readGitignore(rootPath: string): Promise<string[]> {
   }
 }
 
-// Helper function to convert glob patterns to regex
+/**
+ * Converts a glob pattern to a RegExp for file path matching.
+ *
+ * Supports common glob patterns:
+ * - '*' matches any characters except path separators (e.g., "*.js" matches "file.js")
+ * - '**' matches any path segments including separators (e.g., double-star patterns)
+ * - '?' matches any single character
+ *
+ * @param pattern - The glob pattern to convert (e.g., "*.log", "temp?")
+ * @returns A RegExp object that can be used to test file paths
+ *
+ * @example
+ * ```typescript
+ * const regex = globToRegex("*.log");
+ * regex.test("error.log"); // true
+ * regex.test("app.js"); // false
+ * ```
+ */
 function globToRegex(pattern: string): RegExp {
   // Escape special regex characters except for our glob patterns
   let regexPattern = pattern
@@ -591,173 +609,6 @@ function globToRegex(pattern: string): RegExp {
   return new RegExp(regexPattern, 'i');
 }
 
-export async function shouldExcludeWithGitignore(
-  item: string,
-  fullPath?: string,
-  rootPath?: string
-): Promise<boolean> {
-  // Get user-defined exclusions from settings
-  const config = vscode.workspace.getConfiguration('filetree-pro');
-  const userExclusions = config.get<string[]>('exclude', []);
-  const respectGitignore = config.get<boolean>('respectGitignore', true);
-
-  // Read .gitignore patterns if enabled
-  let gitignorePatterns: string[] = [];
-  if (respectGitignore && rootPath) {
-    gitignorePatterns = await readGitignore(rootPath);
-  }
-
-  // Common folders and files to exclude
-  const defaultExcludePatterns = [
-    // Build and dependency folders
-    'node_modules',
-    'dist',
-    'build',
-    'out',
-    'target',
-    'bin',
-    'obj',
-    '.next',
-    '.nuxt',
-    '.output',
-    'coverage',
-    'coverage.lcov',
-    '.nyc_output',
-    'lib',
-    'libs',
-    'vendor',
-    'bower_components',
-    'jspm_packages',
-
-    // Version control
-    '.git',
-    '.svn',
-    '.hg',
-    '.bzr',
-
-    // IDE and editor folders
-    '.vscode',
-    '.idea',
-    '.vs',
-    '.cursor',
-    '.atom',
-    '.sublime-project',
-    '.sublime-workspace',
-
-    // Environment files (sensitive)
-    '.env.local',
-    '.env.production',
-    '.env.development',
-    '.env.test',
-    'venv',
-    '.venv',
-    'env',
-    '.python-version',
-    '.ruby-version',
-    '.node-version',
-
-    // OS generated
-    '.DS_Store',
-    'Thumbs.db',
-    '.Trash',
-    'desktop.ini',
-    '$RECYCLE.BIN',
-
-    // Logs and temp files
-    '*.log',
-    '*.tmp',
-    '*.cache',
-    '*.pyc',
-    '__pycache__',
-    '*.swp',
-    '*.swo',
-    '*~',
-
-    // Package manager lock files (often needed for debugging/reproducible builds)
-    // Note: These are sometimes committed and needed, so being more selective
-    'composer.lock',
-    'Gemfile.lock',
-    'Pipfile.lock',
-    'mix.lock',
-
-    // Build artifacts
-    '*.min.js',
-    '*.min.css',
-    '*.map',
-    '*.bundle.js',
-    '*.chunk.js',
-
-    // Generated/config files (commonly auto-generated but sometimes important)
-    '.eslintcache',
-    '.babelrc',
-    '.babelrc.js',
-    'tsconfig.build.json',
-    'karma.conf.js',
-  ];
-
-  // Combine default, user, and gitignore exclusions
-  const excludePatterns = [...defaultExcludePatterns, ...userExclusions, ...gitignorePatterns];
-
-  const itemLower = item.toLowerCase();
-
-  // For user patterns with glob syntax (like **/node_modules/**), we need the full path
-  const pathToCheck = fullPath || item;
-
-  // Normalize path separators for cross-platform compatibility
-  const normalizedPath = pathToCheck.replace(/\\/g, '/');
-
-  // Check exact matches (case-insensitive) - for simple patterns
-  if (
-    excludePatterns.some(pattern => {
-      // Skip glob patterns for exact match check
-      if (pattern.includes('*') || pattern.includes('/')) {
-        return false;
-      }
-      return pattern.toLowerCase() === itemLower;
-    })
-  ) {
-    return true;
-  }
-
-  // Check wildcard and glob patterns
-  for (const pattern of excludePatterns) {
-    if (pattern.includes('*') || pattern.includes('/')) {
-      try {
-        // Handle file extension patterns like *.log, *.tmp first (simple case)
-        if (pattern.startsWith('*.') && !pattern.includes('/')) {
-          const extension = pattern.substring(1); // Remove the * to get .log, .tmp, etc.
-          if (item.toLowerCase().endsWith(extension.toLowerCase())) {
-            return true;
-          }
-        } else {
-          // Handle complex glob patterns like **/node_modules/**, **/*.log, etc.
-          const regex = globToRegex(pattern);
-          if (regex.test(normalizedPath) || regex.test(item)) {
-            return true;
-          }
-        }
-      } catch (error) {
-        // If there's an error with the pattern, log it and continue
-        console.warn(`Invalid exclusion pattern: ${pattern}`, error);
-        continue;
-      }
-    }
-  }
-
-  // Check for common build/artifact patterns (only exact matches)
-  if (
-    itemLower === 'build' ||
-    itemLower === 'dist' ||
-    itemLower === 'cache' ||
-    itemLower === 'temp' ||
-    itemLower === 'tmp'
-  ) {
-    return true;
-  }
-
-  return false;
-}
-
 export function shouldExclude(item: string, fullPath?: string, rootPath?: string): boolean {
   // Get user-defined exclusions from settings
   const config = vscode.workspace.getConfiguration('filetree-pro');
@@ -769,7 +620,6 @@ export function shouldExclude(item: string, fullPath?: string, rootPath?: string
   if (respectGitignore && rootPath) {
     try {
       const gitignorePath = path.join(rootPath, '.gitignore');
-      const fs = require('fs');
       if (fs.existsSync(gitignorePath)) {
         const content = fs.readFileSync(gitignorePath, 'utf8');
         gitignorePatterns = content
@@ -798,9 +648,6 @@ export function shouldExclude(item: string, fullPath?: string, rootPath?: string
     'coverage',
     'coverage.lcov',
     '.nyc_output',
-    'lib',
-    'libs',
-    'vendor',
     'bower_components',
     'jspm_packages',
 
