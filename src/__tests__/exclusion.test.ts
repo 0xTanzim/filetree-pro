@@ -36,21 +36,16 @@ describe('📁 Exclusion Tests', () => {
 
       try {
         const result = await buildTreeData('/test', 10, true, '/test', 0);
-        console.log('Result length:', result.length);
-        console.log('Result:', JSON.stringify(result, null, 2));
 
         // Should not include node_modules
         const nodeModulesNode = result.find((node: any) => node.name === 'node_modules');
-        console.log('node_modules found:', nodeModulesNode);
         expect(nodeModulesNode).toBeUndefined();
 
         // Should include other files
         const packageJsonNode = result.find((node: any) => node.name === 'package.json');
-        console.log('package.json found:', packageJsonNode);
         expect(packageJsonNode).toBeDefined();
         expect(packageJsonNode.type).toBe('file');
       } catch (error) {
-        console.error('Error in test:', error);
         throw error;
       }
     });

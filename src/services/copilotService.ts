@@ -13,12 +13,6 @@ export class CopilotService {
     try {
       const copilotExtension = vscode.extensions.getExtension('github.copilot');
       this._isCopilotAvailable = !!copilotExtension && copilotExtension.isActive;
-
-      if (this._isCopilotAvailable) {
-        console.log('GitHub Copilot is available and active');
-      } else {
-        console.log('GitHub Copilot is not available or not active');
-      }
     } catch (error) {
       console.error('Error checking Copilot availability:', error);
       this._isCopilotAvailable = false;

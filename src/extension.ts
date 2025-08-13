@@ -1,17 +1,20 @@
 import * as vscode from 'vscode';
 import { registerCommands } from './commands/commands';
 
-export function activate(context: vscode.ExtensionContext): void {
-  console.log('FileTree Pro is now active!');
+export function activate(context: vscode.ExtensionContext) {
+  try {
+    // Register all commands
+    const commandDisposables = registerCommands();
 
-  // Register commands
-  const commands = registerCommands();
-  commands.forEach(command => {
-    context.subscriptions.push(command);
-  });
+    commandDisposables.forEach(command => {
+      context.subscriptions.push(command);
+    });
 
-  // Show welcome message if first time
-  showWelcomeMessage(context);
+    // Show welcome message if first time
+    showWelcomeMessage(context);
+  } catch (error) {
+    vscode.window.showErrorMessage(`Failed to activate FileTree Pro: ${error}`);
+  }
 }
 
 export function deactivate(): void {
