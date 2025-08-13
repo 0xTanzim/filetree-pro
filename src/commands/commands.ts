@@ -593,6 +593,14 @@ export async function readGitignore(rootPath: string): Promise<string[]> {
  * ```
  */
 function globToRegex(pattern: string): RegExp {
+  // Handle directory patterns ending with /
+  if (pattern.endsWith('/')) {
+    // Remove trailing slash and treat as exact directory name match
+    const dirName = pattern.slice(0, -1);
+    const escapedDirName = dirName.replace(/[.+^${}()|[\]\\]/g, '\\$&');
+    return new RegExp(`(^|/)${escapedDirName}(/|$)`, 'i');
+  }
+
   // Escape special regex characters except for our glob patterns
   let regexPattern = pattern
     .replace(/[.+^${}()|[\]\\]/g, '\\$&') // Escape regex special chars
@@ -601,9 +609,16 @@ function globToRegex(pattern: string): RegExp {
     .replace(/__STAR__/g, '[^/]*') // * means match any characters except path separator
     .replace(/\\\?/g, '.'); // ? means match any single character
 
-  // Ensure the pattern matches the full path for ** patterns
-  if (pattern.includes('**/')) {
+  // For exact directory/file matches, anchor the pattern
+  if (!pattern.includes('*') && !pattern.includes('/')) {
+    // Exact name match - should only match at path boundaries
     regexPattern = `(^|/)${regexPattern}(/|$)`;
+  } else if (pattern.includes('**/')) {
+    // Double star patterns - ensure proper path matching
+    regexPattern = `(^|/)${regexPattern}(/|$)`;
+  } else if (pattern.startsWith('*.')) {
+    // File extension patterns - anchor to end of string
+    regexPattern = `${regexPattern}$`;
   }
 
   return new RegExp(regexPattern, 'i');
@@ -732,17 +747,10 @@ export function shouldExclude(item: string, fullPath?: string, rootPath?: string
   if (
     excludePatterns.some(pattern => {
       // Skip glob patterns for exact match check
-      if (pattern.includes('*')) {
+      if (pattern.includes('*') || pattern.includes('/')) {
         return false;
       }
-      // Handle directory patterns ending with /
-      if (pattern.endsWith('/')) {
-        return pattern.slice(0, -1).toLowerCase() === itemLower;
-      }
-      // Skip patterns with / that aren't at the end
-      if (pattern.includes('/')) {
-        return false;
-      }
+      // For exact name matching, only match complete names, not substrings
       return pattern.toLowerCase() === itemLower;
     })
   ) {
