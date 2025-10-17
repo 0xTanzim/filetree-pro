@@ -38,14 +38,14 @@ export class AnalyticsService {
     }
   }
 
-  async getProjectAnalytics(): Promise<AnalyticsData> {
+  async getProjectAnalytics(token?: vscode.CancellationToken): Promise<AnalyticsData> {
     if (!this.analyticsData) {
-      await this.generateAnalytics();
+      await this.generateAnalytics(token);
     }
     return this.analyticsData!;
   }
 
-  private async generateAnalytics(): Promise<void> {
+  private async generateAnalytics(token?: vscode.CancellationToken): Promise<void> {
     const workspaceFolders = vscode.workspace.workspaceFolders;
     if (!workspaceFolders) {
       this.analyticsData = this.getEmptyAnalytics();
@@ -60,7 +60,7 @@ export class AnalyticsService {
 
       // Collect all files recursively
       for (const folder of workspaceFolders) {
-        await this.collectFilesRecursively(folder.uri, allFiles, fileTypes, 0);
+        await this.collectFilesRecursively(folder.uri, allFiles, fileTypes, 0, token);
       }
 
       // Calculate statistics
@@ -111,8 +111,14 @@ export class AnalyticsService {
     uri: vscode.Uri,
     allFiles: FileTreeItem[],
     fileTypes: Record<string, number>,
-    depth: number
+    depth: number,
+    token?: vscode.CancellationToken
   ): Promise<void> {
+    // Check if operation was cancelled
+    if (token?.isCancellationRequested) {
+      return;
+    }
+
     try {
       const entries = await vscode.workspace.fs.readDirectory(uri);
 
@@ -149,7 +155,7 @@ export class AnalyticsService {
 
         // Recursively process folders
         if (item.type === 'folder') {
-          await this.collectFilesRecursively(itemUri, allFiles, fileTypes, depth + 1);
+          await this.collectFilesRecursively(itemUri, allFiles, fileTypes, depth + 1, token);
         }
       }
     } catch (error) {

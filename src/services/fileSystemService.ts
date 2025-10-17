@@ -1,10 +1,24 @@
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { ExclusionPattern, ExtensionConfig, FileSystemStats, FileTreeItem } from '../types';
+import { CacheManager, createCache } from '../utils/cacheManager';
+import { ErrorCategory, ErrorSeverity, getErrorHandler } from '../utils/errorHandler';
 import { getFileTypeInfo } from '../utils/fileUtils';
+import {
+  validateExclusionPatterns,
+  validateFileSize,
+  validatePath,
+  validatePattern,
+} from '../utils/securityUtils';
 
+/**
+ * File system service with caching, security validation, and performance optimization.
+ * Uses LRU cache to prevent memory leaks and validates all inputs for security.
+ *
+ * @since 0.2.0
+ */
 export class FileSystemService {
-  private cache = new Map<string, FileTreeItem>();
+  private cache: CacheManager<string, FileTreeItem>;
   private stats: FileSystemStats = {
     readTime: 0,
     writeTime: 0,
@@ -17,10 +31,26 @@ export class FileSystemService {
   };
   private config: ExtensionConfig;
   private exclusionPatterns: ExclusionPattern[] = [];
+  private errorHandler = getErrorHandler();
+  private cleanupInterval: NodeJS.Timeout | null = null;
 
   constructor() {
     this.config = this.loadConfig();
     this.initializeExclusionPatterns();
+
+    // Initialize LRU cache with 100 entries and 5-minute TTL
+    this.cache = createCache<string, FileTreeItem>(100, 5);
+
+    // Start periodic cache cleanup (every 5 minutes)
+    this.cleanupInterval = setInterval(
+      () => {
+        const expired = this.cache.cleanup();
+        if (expired > 0) {
+          console.log(`[FileSystemService] Cleaned up ${expired} expired cache entries`);
+        }
+      },
+      5 * 60 * 1000
+    );
   }
 
   private loadConfig(): ExtensionConfig {
@@ -59,12 +89,31 @@ export class FileSystemService {
       { pattern: '*.cache', type: 'glob' },
     ];
 
-    // Add user-defined exclusions
-    this.config.exclude.forEach(pattern => {
-      this.exclusionPatterns.push({
-        pattern,
-        type: pattern.includes('*') ? 'glob' : 'exact',
+    // Add user-defined exclusions with validation
+    const userExclusions = this.config.exclude || [];
+    const validationResult = validateExclusionPatterns(userExclusions);
+
+    if (!validationResult.valid) {
+      this.errorHandler.handleError({
+        message: `Invalid exclusion patterns: ${validationResult.error}`,
+        severity: ErrorSeverity.WARNING,
+        category: ErrorCategory.SECURITY,
+        context: { patterns: userExclusions },
+        timestamp: new Date(),
       });
+      // Use only default patterns if user patterns are invalid
+      return;
+    }
+
+    // Add validated user patterns
+    userExclusions.forEach(pattern => {
+      const patternValidation = validatePattern(pattern);
+      if (patternValidation.valid) {
+        this.exclusionPatterns.push({
+          pattern,
+          type: pattern.includes('*') ? 'glob' : 'exact',
+        });
+      }
     });
   }
 
@@ -72,12 +121,27 @@ export class FileSystemService {
     const startTime = Date.now();
     const cacheKey = `${uri.fsPath}-${depth}`;
 
-    // Check cache first
-    if (this.cache.has(cacheKey)) {
-      if (this.stats.cacheHitRate !== undefined) {
-        this.stats.cacheHitRate += 1;
+    // Validate path for security
+    const pathValidation = validatePath(uri.fsPath);
+    if (!pathValidation.valid) {
+      await this.errorHandler.handleError(
+        this.errorHandler.createSecurityError(`Invalid path: ${pathValidation.error}`, {
+          path: uri.fsPath,
+        })
+      );
+      if (this.stats.errorCount !== undefined) {
+        this.stats.errorCount += 1;
       }
-      return this.cache.get(cacheKey)!.children || [];
+      return [];
+    }
+
+    // Check cache first
+    const cachedResult = this.cache.get(cacheKey);
+    if (cachedResult) {
+      // Update cache statistics
+      const cacheStats = this.cache.getStatistics();
+      this.stats.cacheHitRate = cacheStats.hitRate;
+      return cachedResult.children || [];
     }
 
     try {
@@ -101,11 +165,15 @@ export class FileSystemService {
         // Get additional file information if needed
         if (item.type === 'file') {
           await this.addFileDetails(item);
-        } else if (depth < this.config.maxDepth) {
-          // Recursively get children for folders
-          const children = await this.getFileTree(itemUri, depth + 1);
-          if (children.length > 0) {
-            item.children = children;
+          this.stats.totalFiles += 1;
+        } else {
+          this.stats.totalFolders += 1;
+          if (depth < this.config.maxDepth) {
+            // Recursively get children for folders
+            const children = await this.getFileTree(itemUri, depth + 1);
+            if (children.length > 0) {
+              item.children = children;
+            }
           }
         }
 
@@ -120,23 +188,34 @@ export class FileSystemService {
         return a.name.localeCompare(b.name);
       });
 
-      // Cache the result
-      this.cache.set(cacheKey, {
+      // Cache the result with LRU eviction
+      const cacheItem: FileTreeItem = {
         uri,
         name: path.basename(uri.fsPath),
         type: 'folder',
         children: items,
-      });
+      };
+      this.cache.set(cacheKey, cacheItem);
 
       if (this.stats.readTime !== undefined) {
         this.stats.readTime += Date.now() - startTime;
       }
+
+      // Update cache statistics
+      const cacheStats = this.cache.getStatistics();
+      this.stats.cacheHitRate = cacheStats.hitRate;
+
       return items;
     } catch (error) {
       if (this.stats.errorCount !== undefined) {
         this.stats.errorCount += 1;
       }
-      console.error('Error reading directory:', error);
+      await this.errorHandler.handleError(
+        this.errorHandler.createFileSystemError('Error reading directory', error as Error, {
+          path: uri.fsPath,
+          depth,
+        })
+      );
       return [];
     }
   }
@@ -167,8 +246,22 @@ export class FileSystemService {
         if (item.uri) {
           const stat = await vscode.workspace.fs.stat(item.uri);
 
+          // Validate file size for security
+          const sizeValidation = validateFileSize(stat.size);
+          if (!sizeValidation.valid) {
+            await this.errorHandler.handleError({
+              message: `File too large: ${sizeValidation.error}`,
+              severity: ErrorSeverity.WARNING,
+              category: ErrorCategory.SECURITY,
+              context: { path: item.uri.fsPath, size: stat.size },
+              timestamp: new Date(),
+            });
+            return;
+          }
+
           if (this.config.showFileSize) {
             item.size = stat.size;
+            this.stats.totalSize += stat.size;
           }
 
           if (this.config.showFileDate) {
@@ -181,7 +274,11 @@ export class FileSystemService {
       const fileTypeInfo = getFileTypeInfo(item.name);
       item.contextValue = `file-${fileTypeInfo.type}`;
     } catch (error) {
-      console.error('Error getting file details:', error);
+      await this.errorHandler.handleError(
+        this.errorHandler.createFileSystemError('Error getting file details', error as Error, {
+          path: item.uri?.fsPath,
+        })
+      );
     }
   }
 
@@ -213,15 +310,48 @@ export class FileSystemService {
 
   async getFileContent(uri: vscode.Uri): Promise<string> {
     try {
+      // Validate path
+      const pathValidation = validatePath(uri.fsPath);
+      if (!pathValidation.valid) {
+        await this.errorHandler.handleError(
+          this.errorHandler.createSecurityError(`Invalid path: ${pathValidation.error}`, {
+            path: uri.fsPath,
+          })
+        );
+        return '';
+      }
+
+      // Check file size before reading
+      const stat = await vscode.workspace.fs.stat(uri);
+      const sizeValidation = validateFileSize(stat.size);
+      if (!sizeValidation.valid) {
+        await this.errorHandler.handleError({
+          message: `File too large to read: ${sizeValidation.error}`,
+          severity: ErrorSeverity.WARNING,
+          category: ErrorCategory.SECURITY,
+          context: { path: uri.fsPath, size: stat.size },
+          timestamp: new Date(),
+        });
+        return '';
+      }
+
       const content = await vscode.workspace.fs.readFile(uri);
       return Buffer.from(content).toString('utf8');
     } catch (error) {
-      console.error('Error reading file content:', error);
+      await this.errorHandler.handleError(
+        this.errorHandler.createFileSystemError('Error reading file content', error as Error, {
+          path: uri.fsPath,
+        })
+      );
       return '';
     }
   }
 
   getStats(): FileSystemStats {
+    // Calculate average file size
+    if (this.stats.totalFiles > 0) {
+      this.stats.averageFileSize = this.stats.totalSize / this.stats.totalFiles;
+    }
     return { ...this.stats };
   }
 
@@ -232,10 +362,17 @@ export class FileSystemService {
   }
 
   clearCache(): void {
-    this.cache.clear();
+    const cleared = this.cache.clear();
+    console.log(`[FileSystemService] Cleared ${cleared} cache entries`);
   }
 
   dispose(): void {
+    // Stop cleanup interval
+    if (this.cleanupInterval) {
+      clearInterval(this.cleanupInterval);
+      this.cleanupInterval = null;
+    }
+
     this.clearCache();
   }
 }

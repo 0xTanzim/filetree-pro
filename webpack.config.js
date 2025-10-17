@@ -1,3 +1,5 @@
+/* eslint-env node */
+/* eslint-disable @typescript-eslint/no-var-requires */
 const path = require('path');
 const TerserPlugin = require('terser-webpack-plugin');
 const CopyPlugin = require('copy-webpack-plugin');
@@ -10,7 +12,6 @@ module.exports = (env, argv) => {
     target: 'node',
     entry: {
       extension: './src/extension.ts',
-      'extension-simple': './src/extension-simple.ts',
     },
     output: {
       path: path.resolve(__dirname, 'out'),

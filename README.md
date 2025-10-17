@@ -13,7 +13,7 @@ Watch FileTree Pro in action below!
 
 ### 🧪 Demo Video
 
-[![Short Demo](https://img.youtube.com/vi/EvgOWywtJjU/hqdefault.jpg)](https://youtu.be/EvgOWywtJjU)
+[![Short Demo](https://img.youtube.com/vi/k0TNEr43gQ0/hqdefault.jpg)](https://youtu.be/k0TNEr43gQ0)
 
 ➡️ _Right-click any folder → Generate file tree in seconds!_
 
@@ -25,6 +25,7 @@ Add this to your VS Code settings (`Ctrl/Cmd + ,`):
 
 ```json
 {
+  "filetree-pro.maxDepth": 10,
   "filetree-pro.exclude": [
     "**/node_modules/**",
     "**/dist/**",
@@ -36,10 +37,30 @@ Add this to your VS Code settings (`Ctrl/Cmd + ,`):
     "**/*.tmp"
   ],
   "filetree-pro.showIcons": true,
-  "filetree-pro.respectGitignore": true,
-  "filetree-pro.useCopilot": false
+  "filetree-pro.respectGitignore": true
 }
 ```
+
+### 🎯 Depth Configuration
+
+**NEW!** Control how deep the file tree scanner goes:
+
+```json
+{
+  "filetree-pro.maxDepth": 5 // Scan 5 levels deep
+}
+```
+
+**Depth Guide:**
+
+| Depth | Speed          | Best For                       | Files Scanned |
+| ----- | -------------- | ------------------------------ | ------------- |
+| 2     | ⚡⚡⚡ Instant | README docs, quick overview    | ~50           |
+| 5     | ⚡⚡ Fast      | Code reviews, presentations    | ~500          |
+| 10    | ⚡ Good        | Full analysis, documentation   | ~5,000        |
+| 15+   | ⏱️ Slower      | Deep analysis, large monorepos | 10,000+       |
+
+**Tip:** Start with depth 3-5 for large projects, then increase if needed!
 
 ### Custom Exclusions
 
@@ -55,6 +76,17 @@ Add your own patterns to exclude files/folders:
   ]
 }
 ```
+
+### 📚 Full Configuration Guide
+
+For detailed configuration options including:
+
+- Monorepo optimization strategies
+- Language-specific configurations
+- Performance tuning
+- Exclusion pattern syntax
+
+**[📖 Read the Complete Configuration Guide →](./docs/CONFIGURATION-GUIDE.md)**
 
 ## 🚀 Features
 
@@ -270,6 +302,44 @@ Automatically respects your project's `.gitignore` patterns when generating file
 - **Small Projects** (< 1,000 files): < 1 second
 - **Medium Projects** (1,000-10,000 files): < 3 seconds
 - **Large Projects** (10,000+ files): < 10 seconds
+
+**💡 Tip:** Use `maxDepth: 3-5` for large projects to speed up generation!
+
+---
+
+## 🏗️ Architecture & Documentation
+
+### For Developers & Contributors
+
+Want to understand how FileTree Pro works under the hood? Check out our comprehensive documentation:
+
+**[📐 Architecture Documentation →](./docs/ARCHITECTURE.md)**
+
+**What's inside:**
+
+- 🏛️ High-level architecture with Mermaid diagrams
+- 📦 Component breakdown and responsibilities
+- 🔄 Data flow and request lifecycle
+- ⚙️ Configuration system explained
+- 🔒 Security & validation patterns
+- 📊 Performance optimization techniques
+- 🚀 Future improvements roadmap
+
+**Perfect for:**
+
+- Senior developers reviewing the codebase
+- Contributors wanting to understand the architecture
+- Teams considering adoption
+- Open source enthusiasts learning extension development
+
+### Additional Docs
+
+- **[📖 Configuration Guide](./docs/CONFIGURATION-GUIDE.md)** - Complete settings reference
+- **[⚡ Quick Start](./docs/CONFIG-QUICK-START.md)** - Common configuration recipes
+- **[🏛️ Architecture Proposal](./docs/ARCHITECTURE_PROPOSAL.md)** - Future improvements
+- **[📝 Changelog](./CHANGELOG.md)** - Version history
+
+---
 
 ## 📄 License
 
