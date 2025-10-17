@@ -1,5 +1,5 @@
+import { format, formatDistanceToNow } from 'date-fns';
 import { filesize } from 'filesize';
-import moment from 'moment';
 import * as path from 'path';
 import { FileTypeInfo } from '../types';
 
@@ -180,11 +180,11 @@ export function formatFileSize(bytes: number): string {
 }
 
 export function formatDate(date: Date): string {
-  return moment(date).format('MMM DD, YYYY HH:mm');
+  return format(date, 'MMM dd, yyyy HH:mm');
 }
 
 export function formatRelativeDate(date: Date): string {
-  return moment(date).fromNow();
+  return formatDistanceToNow(date, { addSuffix: true });
 }
 
 export function getFileExtension(filename: string): string {

@@ -5,6 +5,13 @@ const mockVscode = {
     showInformationMessage: jest.fn(),
     showErrorMessage: jest.fn(),
     showWarningMessage: jest.fn(),
+    createOutputChannel: jest.fn(() => ({
+      appendLine: jest.fn(),
+      append: jest.fn(),
+      show: jest.fn(),
+      hide: jest.fn(),
+      dispose: jest.fn(),
+    })),
   },
   workspace: {
     getConfiguration: jest.fn(() => ({

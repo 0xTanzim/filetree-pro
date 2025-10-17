@@ -1,6 +1,16 @@
-import { shouldExclude } from '../commands/commands';
+import { ExclusionService } from '../services/exclusionService';
 
 describe('🔍 globToRegex Pattern Matching', () => {
+  let exclusionService: ExclusionService;
+
+  beforeEach(() => {
+    exclusionService = new ExclusionService();
+  });
+
+  afterEach(() => {
+    exclusionService.clearCache();
+  });
+
   describe('Directory patterns ending with /', () => {
     test('should match directory names correctly', () => {
       // Mock .gitignore with directory patterns
@@ -20,17 +30,27 @@ cache-dir/`;
       });
 
       // Test directory patterns
-      expect(shouldExclude('temp-folder', '/test-project/temp-folder', mockRootPath)).toBe(true);
-      expect(shouldExclude('build-output', '/test-project/build-output', mockRootPath)).toBe(true);
-      expect(shouldExclude('cache-dir', '/test-project/cache-dir', mockRootPath)).toBe(true);
+      expect(
+        exclusionService.shouldExclude('temp-folder', '/test-project/temp-folder', mockRootPath)
+      ).toBe(true);
+      expect(
+        exclusionService.shouldExclude('build-output', '/test-project/build-output', mockRootPath)
+      ).toBe(true);
+      expect(
+        exclusionService.shouldExclude('cache-dir', '/test-project/cache-dir', mockRootPath)
+      ).toBe(true);
 
       // Test nested directory patterns
-      expect(shouldExclude('temp-folder', '/test-project/src/temp-folder', mockRootPath)).toBe(
-        true
-      );
-      expect(shouldExclude('build-output', '/test-project/some/build-output', mockRootPath)).toBe(
-        true
-      );
+      expect(
+        exclusionService.shouldExclude('temp-folder', '/test-project/src/temp-folder', mockRootPath)
+      ).toBe(true);
+      expect(
+        exclusionService.shouldExclude(
+          'build-output',
+          '/test-project/some/build-output',
+          mockRootPath
+        )
+      ).toBe(true);
 
       // Restore original functions
       require('fs').existsSync = originalExistsSync;
@@ -57,17 +77,31 @@ temp`;
 
       // These should NOT be excluded (files containing pattern names)
       expect(
-        shouldExclude('CheckoutBanner.tsx', '/test-project/CheckoutBanner.tsx', mockRootPath)
+        exclusionService.shouldExclude(
+          'CheckoutBanner.tsx',
+          '/test-project/CheckoutBanner.tsx',
+          mockRootPath
+        )
       ).toBe(false);
       expect(
-        shouldExclude('LayoutComponent.tsx', '/test-project/LayoutComponent.tsx', mockRootPath)
+        exclusionService.shouldExclude(
+          'LayoutComponent.tsx',
+          '/test-project/LayoutComponent.tsx',
+          mockRootPath
+        )
       ).toBe(false);
-      expect(shouldExclude('template.js', '/test-project/template.js', mockRootPath)).toBe(false);
+      expect(
+        exclusionService.shouldExclude('template.js', '/test-project/template.js', mockRootPath)
+      ).toBe(false);
 
       // These SHOULD be excluded (exact matches)
-      expect(shouldExclude('checkout', '/test-project/checkout', mockRootPath)).toBe(true);
-      expect(shouldExclude('layout', '/test-project/layout', mockRootPath)).toBe(true);
-      expect(shouldExclude('temp', '/test-project/temp', mockRootPath)).toBe(true);
+      expect(
+        exclusionService.shouldExclude('checkout', '/test-project/checkout', mockRootPath)
+      ).toBe(true);
+      expect(exclusionService.shouldExclude('layout', '/test-project/layout', mockRootPath)).toBe(
+        true
+      );
+      expect(exclusionService.shouldExclude('temp', '/test-project/temp', mockRootPath)).toBe(true);
 
       // Restore original functions
       require('fs').existsSync = originalExistsSync;
@@ -93,13 +127,23 @@ temp`;
       });
 
       // These should be excluded
-      expect(shouldExclude('app.log', '/test-project/app.log', mockRootPath)).toBe(true);
-      expect(shouldExclude('build.tmp', '/test-project/build.tmp', mockRootPath)).toBe(true);
-      expect(shouldExclude('data.cache', '/test-project/data.cache', mockRootPath)).toBe(true);
+      expect(exclusionService.shouldExclude('app.log', '/test-project/app.log', mockRootPath)).toBe(
+        true
+      );
+      expect(
+        exclusionService.shouldExclude('build.tmp', '/test-project/build.tmp', mockRootPath)
+      ).toBe(true);
+      expect(
+        exclusionService.shouldExclude('data.cache', '/test-project/data.cache', mockRootPath)
+      ).toBe(true);
 
       // These should not be excluded
-      expect(shouldExclude('app.js', '/test-project/app.js', mockRootPath)).toBe(false);
-      expect(shouldExclude('login.tsx', '/test-project/login.tsx', mockRootPath)).toBe(false);
+      expect(exclusionService.shouldExclude('app.js', '/test-project/app.js', mockRootPath)).toBe(
+        false
+      );
+      expect(
+        exclusionService.shouldExclude('login.tsx', '/test-project/login.tsx', mockRootPath)
+      ).toBe(false);
 
       // Restore original functions
       require('fs').existsSync = originalExistsSync;
