@@ -63,28 +63,43 @@ export class GenerateTreeCommand {
 
       const useIcons = iconChoice === 'With Icons';
 
-      // Show progress with loading indicator
-      const progressOptions = {
+      // Show progress with proper VS Code API (withProgress)
+      const progressOptions: vscode.ProgressOptions = {
         location: vscode.ProgressLocation.Notification,
         title: `Generating file tree for ${folderName}`,
-        cancellable: false,
+        cancellable: true, // Allow cancellation
       };
 
-      await vscode.window.withProgress(progressOptions, async progress => {
-        progress.report({ message: 'Starting tree generation...' });
+      await vscode.window.withProgress(progressOptions, async (progress, token) => {
+        // Check cancellation
+        if (token.isCancellationRequested) {
+          vscode.window.showInformationMessage('Tree generation cancelled');
+          return;
+        }
 
-        // Generate the file tree
+        progress.report({ increment: 0, message: 'Starting tree generation...' });
+
+        // Generate the file tree with progress callback
         const treeContent = await this.generateFileTree(
           folderPath,
           10,
           useIcons,
           formatChoice.value,
-          message => {
-            progress.report({ message });
+          (message: string, increment?: number) => {
+            // Check cancellation during generation
+            if (token.isCancellationRequested) {
+              throw new Error('Cancelled by user');
+            }
+
+            // Report incremental progress
+            progress.report({
+              increment: increment || 10,
+              message,
+            });
           }
         );
 
-        progress.report({ message: 'Creating document...' });
+        progress.report({ increment: 90, message: 'Creating document...' });
 
         // Get language ID from formatter
         const formatterType = formatChoice.value as FormatterType;
@@ -110,7 +125,7 @@ export class GenerateTreeCommand {
   }
 
   /**
-   * Generate file tree using FormatterFactory
+   * ✅ Generate file tree using FormatterFactory with progress reporting
    * @private
    */
   private async generateFileTree(
@@ -118,7 +133,7 @@ export class GenerateTreeCommand {
     maxDepth: number = 10,
     forceShowIcons?: boolean,
     format: string = 'markdown',
-    progressCallback?: (message: string) => void
+    progressCallback?: (message: string, increment?: number) => void
   ): Promise<string> {
     // Get user settings or use forced value
     const config = vscode.workspace.getConfiguration('filetree-pro');
@@ -127,7 +142,7 @@ export class GenerateTreeCommand {
 
     // Build tree items
     if (progressCallback) {
-      progressCallback('Building file tree structure...');
+      progressCallback('Building file tree structure...', 5);
     }
 
     const items = await this.treeBuilderService.buildFileTreeItems(
@@ -135,12 +150,16 @@ export class GenerateTreeCommand {
       maxDepth,
       rootPath,
       0,
-      progressCallback
+      (msg: string) => {
+        if (progressCallback) {
+          progressCallback(msg, 2); // Small increments during tree building
+        }
+      }
     );
 
     // Use FormatterFactory to get formatter
     if (progressCallback) {
-      progressCallback(`Formatting as ${format.toUpperCase()}...`);
+      progressCallback(`Formatting as ${format.toUpperCase()}...`, 5);
     }
 
     const formatterType = format as FormatterType;

@@ -6,7 +6,6 @@
  * @since 0.3.0
  */
 
-import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
 
@@ -16,6 +15,7 @@ import * as vscode from 'vscode';
  */
 export class ExclusionService {
   private gitignoreCache = new Map<string, string[]>();
+  private timers: NodeJS.Timeout[] = []; // Track timers for cleanup
 
   /**
    * Read and parse .gitignore file
@@ -37,46 +37,15 @@ export class ExclusionService {
         .filter(line => line.trim() && !line.startsWith('#'))
         .map(line => line.trim());
 
-      // Cache for 5 minutes
+      // Cache for 5 minutes - ✅ Track timer
       this.gitignoreCache.set(rootPath, patterns);
-      setTimeout(() => this.gitignoreCache.delete(rootPath), 5 * 60 * 1000);
+      const timer = setTimeout(() => this.gitignoreCache.delete(rootPath), 5 * 60 * 1000);
+      this.timers.push(timer); // Track for cleanup
 
       return patterns;
     } catch {
       return [];
     }
-  }
-
-  /**
-   * Read gitignore synchronously (fallback for performance)
-   * @param rootPath - Root directory path
-   * @returns Array of gitignore patterns
-   */
-  readGitignoreSync(rootPath: string): string[] {
-    // Check cache first
-    if (this.gitignoreCache.has(rootPath)) {
-      return this.gitignoreCache.get(rootPath)!;
-    }
-
-    try {
-      const gitignorePath = path.join(rootPath, '.gitignore');
-      if (fs.existsSync(gitignorePath)) {
-        const content = fs.readFileSync(gitignorePath, 'utf8');
-        const patterns = content
-          .split('\n')
-          .filter((line: string) => line.trim() && !line.startsWith('#'))
-          .map((line: string) => line.trim());
-
-        // Cache
-        this.gitignoreCache.set(rootPath, patterns);
-        setTimeout(() => this.gitignoreCache.delete(rootPath), 5 * 60 * 1000);
-
-        return patterns;
-      }
-    } catch (error) {
-      // Ignore errors
-    }
-    return [];
   }
 
   /**
@@ -93,6 +62,13 @@ export class ExclusionService {
    * ```
    */
   globToRegex(pattern: string): RegExp {
+    // Handle file extension patterns FIRST (before escaping)
+    if (pattern.startsWith('*.') && !pattern.includes('/')) {
+      const extension = pattern.slice(1); // Remove the *
+      const escapedExt = extension.replace(/\./g, '\\.');
+      return new RegExp(`${escapedExt}$`, 'i');
+    }
+
     // Handle directory patterns ending with /
     if (pattern.endsWith('/')) {
       const dirName = pattern.slice(0, -1);
@@ -115,9 +91,6 @@ export class ExclusionService {
     } else if (pattern.includes('**/')) {
       // Double star patterns
       regexPattern = `(^|/)${regexPattern}(/|$)`;
-    } else if (pattern.startsWith('*.')) {
-      // File extension patterns
-      regexPattern = `${regexPattern}$`;
     }
 
     return new RegExp(regexPattern, 'i');
@@ -225,10 +198,10 @@ export class ExclusionService {
     const userExclusions = config.get<string[]>('exclude', []);
     const respectGitignore = config.get<boolean>('respectGitignore', true);
 
-    // Read .gitignore patterns if enabled
+    // Use CACHED .gitignore patterns (pre-loaded async)
     let gitignorePatterns: string[] = [];
-    if (respectGitignore && rootPath) {
-      gitignorePatterns = this.readGitignoreSync(rootPath);
+    if (respectGitignore && rootPath && this.gitignoreCache.has(rootPath)) {
+      gitignorePatterns = this.gitignoreCache.get(rootPath)!;
     }
 
     // Combine all exclusion patterns
@@ -298,6 +271,18 @@ export class ExclusionService {
    * Clear gitignore cache
    */
   clearCache(): void {
+    this.gitignoreCache.clear();
+  }
+
+  /**
+   * ✅ Cleanup resources - clear timers and cache
+   */
+  dispose(): void {
+    // Clear all running timers
+    this.timers.forEach(timer => clearTimeout(timer));
+    this.timers = [];
+
+    // Clear cache
     this.gitignoreCache.clear();
   }
 }

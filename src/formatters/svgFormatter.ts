@@ -39,8 +39,9 @@ export class SVGFormatter implements TreeFormatter {
 
     // Render all nodes
     for (const item of items) {
-      yOffset = this.renderNode(item, 30, 0, yOffset, options, svgContent);
-      yOffset += 25;
+      const result = this.renderNode(item, 30, 0, yOffset, options);
+      svgContent += result.content;
+      yOffset = result.yOffset + 25;
     }
 
     svgContent += '\n</svg>';
@@ -86,18 +87,28 @@ export class SVGFormatter implements TreeFormatter {
 
   /**
    * Render a single node and its children
+   * Returns both the SVG content and the updated y-offset
    */
   private renderNode(
     item: FileTreeItem,
     x: number,
     level: number,
     yOffset: number,
-    options: FormatOptions,
-    svgContent: string
-  ): number {
-    let content = svgContent;
-    const fileInfo = getFileTypeInfo(item.name);
-    const icon = options.showIcons ? fileInfo.icon : '';
+    options: FormatOptions
+  ): { content: string; yOffset: number } {
+    let content = '';
+
+    // Get icon based on type (folder or file)
+    let icon = '';
+    if (options.showIcons) {
+      if (item.type === 'folder') {
+        icon = '📁';
+      } else {
+        const fileInfo = getFileTypeInfo(item.name);
+        icon = fileInfo.icon;
+      }
+    }
+
     const displayName = item.name + (item.type === 'folder' ? '/' : '');
     const textClass = item.type === 'folder' ? 'folder-text' : 'file-text';
 
@@ -119,12 +130,13 @@ export class SVGFormatter implements TreeFormatter {
     if (item.children && item.children.length > 0) {
       yOffset += 30;
       for (const child of item.children) {
-        yOffset = this.renderNode(child, x + 30, level + 1, yOffset, options, content);
-        yOffset += 25;
+        const childResult = this.renderNode(child, x + 30, level + 1, yOffset, options);
+        content += childResult.content;
+        yOffset = childResult.yOffset + 25;
       }
     }
 
-    return yOffset + 10;
+    return { content, yOffset: yOffset + 10 };
   }
 
   /**

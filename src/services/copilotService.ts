@@ -69,6 +69,7 @@ export class CopilotService {
   private _isCopilotAvailable: boolean = false;
   private analysisCache: CacheManager<string, CopilotAnalysis>;
   private errorHandler = getErrorHandler();
+  private timers: NodeJS.Timeout[] = []; // Track timers for cleanup
 
   // Rate limiter: 10 requests per minute (burst of 5)
   private rateLimiter: RateLimiter;
@@ -193,9 +194,12 @@ export class CopilotService {
     const prompt = this.buildAnalysisPrompt(fileName, fileExtension, content);
 
     try {
-      // Create timeout promise
+      // Create timeout promise with tracked timer
       const timeoutPromise = new Promise<never>((_, reject) => {
-        setTimeout(() => reject(new Error('Copilot API request timed out')), this.REQUEST_TIMEOUT);
+        const timer = setTimeout(() => {
+          reject(new Error('Copilot API request timed out'));
+        }, this.REQUEST_TIMEOUT);
+        this.timers.push(timer); // Track timer
       });
 
       // Race between API call and timeout
@@ -324,7 +328,11 @@ Please provide specific, actionable suggestions.`;
 
       // Create timeout promise
       const timeoutPromise = new Promise<never>((_, reject) => {
-        setTimeout(() => reject(new Error('Request timed out')), this.REQUEST_TIMEOUT);
+        const timer = setTimeout(
+          () => reject(new Error('Request timed out')),
+          this.REQUEST_TIMEOUT
+        );
+        this.timers.push(timer);
       });
 
       const response = await Promise.race([
@@ -374,7 +382,11 @@ Provide specific, actionable recommendations.`;
 
       // Create timeout promise
       const timeoutPromise = new Promise<never>((_, reject) => {
-        setTimeout(() => reject(new Error('Request timed out')), this.REQUEST_TIMEOUT);
+        const timer = setTimeout(
+          () => reject(new Error('Request timed out')),
+          this.REQUEST_TIMEOUT
+        );
+        this.timers.push(timer);
       });
 
       const response = await Promise.race([
@@ -406,6 +418,11 @@ Provide specific, actionable recommendations.`;
   }
 
   dispose(): void {
+    // Clear all pending timers
+    this.timers.forEach(timer => clearTimeout(timer));
+    this.timers = [];
+
+    // Clear cache
     this.clearCache();
   }
 }

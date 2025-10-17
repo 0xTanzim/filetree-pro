@@ -16,7 +16,25 @@ declare global {
       stat: jest.fn(),
       watch: jest.fn(),
     },
-    getConfiguration: jest.fn(),
+    getConfiguration: jest.fn(() => ({
+      get: jest.fn((key: string, defaultValue: any) => {
+        // Return default values for common configuration keys
+        const config: Record<string, any> = {
+          exclude: ['node_modules', '.git', 'dist', '.venv', 'build', 'out'],
+          respectGitignore: true,
+          useCopilot: true,
+          maxDepth: 10,
+          showFileSize: true,
+          showFileDate: false,
+          enableSearch: true,
+          enableAnalytics: true,
+        };
+        return config[key] ?? defaultValue;
+      }),
+      has: jest.fn(() => true),
+      inspect: jest.fn(),
+      update: jest.fn(),
+    })),
     findFiles: jest.fn(),
   },
   window: {

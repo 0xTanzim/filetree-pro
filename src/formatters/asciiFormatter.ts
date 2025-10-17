@@ -69,9 +69,17 @@ export class ASCIIFormatter implements TreeFormatter {
       const connector = isLast ? '└── ' : '├── ';
       const newPrefix = prefix + (isLast ? '    ' : '│   ');
 
-      // Get icon if needed
-      const fileInfo = getFileTypeInfo(item.name);
-      const icon = options.showIcons ? fileInfo.icon + ' ' : '';
+      // Get icon based on type (folder or file)
+      let icon = '';
+      if (options.showIcons) {
+        if (item.type === 'folder') {
+          icon = '📁 ';
+        } else {
+          const fileInfo = getFileTypeInfo(item.name);
+          icon = fileInfo.icon + ' ';
+        }
+      }
+
       const suffix = item.type === 'folder' ? '/' : '';
 
       lines.push(`${prefix}${connector}${icon}${item.name}${suffix}`);

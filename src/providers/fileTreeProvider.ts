@@ -6,10 +6,15 @@ import { FileTreeItem } from '../types';
 import { formatDate, formatFileSize, getFileIcon } from '../utils/fileUtils';
 
 export class FileTreeProvider implements vscode.TreeDataProvider<FileTreeItem> {
+  // Event emitter for tree changes (Official VS Code API pattern)
   private _onDidChangeTreeData: vscode.EventEmitter<FileTreeItem | undefined | null | void> =
     new vscode.EventEmitter<FileTreeItem | undefined | null | void>();
   readonly onDidChangeTreeData: vscode.Event<FileTreeItem | undefined | null | void> =
     this._onDidChangeTreeData.event;
+
+  // Chunked loading configuration
+  private static readonly CHUNK_SIZE = 100; // Load 100 items at a time
+  private loadingChunks: Map<string, boolean> = new Map(); // Track loading state
 
   constructor(
     private fileSystemService: FileSystemService,
@@ -54,6 +59,11 @@ export class FileTreeProvider implements vscode.TreeDataProvider<FileTreeItem> {
     return treeItem;
   }
 
+  /**
+   * ✅ Get children for tree node - implements lazy loading
+   * Called by VS Code when user expands a node (on-demand)
+   * Implements chunked loading for large directories
+   */
   async getChildren(element?: FileTreeItem): Promise<FileTreeItem[]> {
     if (!vscode.workspace.workspaceFolders) {
       return [];
@@ -77,15 +87,82 @@ export class FileTreeProvider implements vscode.TreeDataProvider<FileTreeItem> {
 
         return items;
       } else {
-        // Get children of the current element
+        // Get children of the current element with chunked loading
         if (element.type === 'folder' && element.uri) {
-          return await this.fileSystemService.getFileTree(element.uri);
+          return await this.getChildrenChunked(element);
         }
         return [];
       }
     } catch (error) {
       console.error('Error getting children:', error);
+      vscode.window.showErrorMessage(`Failed to load children: ${error}`);
       return [];
+    }
+  }
+
+  /**
+   * ✅ Load children in chunks for large directories
+   * Shows first chunk immediately, loads rest progressively
+   */
+  private async getChildrenChunked(element: FileTreeItem): Promise<FileTreeItem[]> {
+    if (!element.uri) {
+      return [];
+    }
+
+    const cacheKey = element.uri.fsPath;
+
+    // If already loaded, return from cache
+    if (element.children && element.children.length > 0) {
+      return element.children;
+    }
+
+    // Load all children
+    const allChildren = await this.fileSystemService.getFileTree(element.uri);
+
+    // If small directory, return all at once
+    if (allChildren.length <= FileTreeProvider.CHUNK_SIZE) {
+      return allChildren;
+    }
+
+    // Large directory - return first chunk immediately
+    const firstChunk = allChildren.slice(0, FileTreeProvider.CHUNK_SIZE);
+
+    // Schedule loading remaining chunks in background
+    if (!this.loadingChunks.get(cacheKey)) {
+      this.loadingChunks.set(cacheKey, true);
+      this.loadRemainingChunks(element, allChildren.slice(FileTreeProvider.CHUNK_SIZE));
+    }
+
+    return firstChunk;
+  }
+
+  /**
+   * ✅ Load remaining chunks progressively in background
+   */
+  private async loadRemainingChunks(
+    parent: FileTreeItem,
+    remaining: FileTreeItem[]
+  ): Promise<void> {
+    // Load in chunks with small delay between each
+    for (let i = 0; i < remaining.length; i += FileTreeProvider.CHUNK_SIZE) {
+      const chunk = remaining.slice(i, i + FileTreeProvider.CHUNK_SIZE);
+
+      // Add chunk to parent's children
+      if (!parent.children) {
+        parent.children = [];
+      }
+      parent.children.push(...chunk);
+
+      // Fire refresh event for this parent (incremental update)
+      this._onDidChangeTreeData.fire(parent);
+
+      // Small delay to avoid blocking UI
+      await new Promise(resolve => setTimeout(resolve, 50));
+    }
+
+    // Clear loading flag
+    if (parent.uri) {
+      this.loadingChunks.delete(parent.uri.fsPath);
     }
   }
 
@@ -131,8 +208,19 @@ export class FileTreeProvider implements vscode.TreeDataProvider<FileTreeItem> {
     return parts.join('\n');
   }
 
-  refresh(): void {
-    this._onDidChangeTreeData.fire();
+  /**
+   * ✅ Refresh entire tree or specific element (Official VS Code API pattern)
+   * @param element - Optional element to refresh (undefined = refresh all)
+   */
+  refresh(element?: FileTreeItem): void {
+    // Clear chunk loading state if refreshing
+    if (!element) {
+      this.loadingChunks.clear();
+    } else if (element.uri) {
+      this.loadingChunks.delete(element.uri.fsPath);
+    }
+
+    this._onDidChangeTreeData.fire(element);
   }
 
   setRootPath(path: string): void {

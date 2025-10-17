@@ -99,6 +99,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
             const analytics = container.resolve<AnalyticsService>('analyticsService');
             analytics.dispose();
           }
+          if (container.has('exclusionService')) {
+            const exclusion = container.resolve<ExclusionService>('exclusionService');
+            exclusion.dispose();
+          }
           container.clear();
           container = null;
         }

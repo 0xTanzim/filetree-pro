@@ -1,3 +1,4 @@
+import * as vscode from 'vscode';
 import { ExclusionService } from '../services/exclusionService';
 
 describe('✅ .gitignore Respect Feature', () => {
@@ -11,26 +12,22 @@ describe('✅ .gitignore Respect Feature', () => {
     exclusionService.clearCache();
   });
 
-  test('should respect .gitignore patterns when enabled', () => {
+  test('should respect .gitignore patterns when enabled', async () => {
     // Create a mock .gitignore file path
     const mockRootPath = '/test-project';
 
-    // Mock fs.existsSync and fs.readFileSync to simulate .gitignore file
-    const originalExistsSync = require('fs').existsSync;
-    const originalReadFileSync = require('fs').readFileSync;
-
-    require('fs').existsSync = jest.fn((path: string) => {
-      return path.includes('.gitignore');
-    });
-
-    require('fs').readFileSync = jest.fn(() => {
-      return `# Test .gitignore
+    // Mock vscode.workspace.fs.readFile to simulate .gitignore file
+    const mockContent = Buffer.from(`# Test .gitignore
 node_modules/
 dist/
 *.log
 temp-folder/
-secret.key`;
-    });
+secret.key`);
+
+    (vscode.workspace.fs.readFile as jest.Mock).mockResolvedValue(mockContent);
+
+    // Pre-load gitignore patterns (CRITICAL!)
+    await exclusionService.readGitignore(mockRootPath);
 
     // Test that gitignore patterns are respected
     expect(
@@ -52,18 +49,16 @@ secret.key`;
     expect(
       exclusionService.shouldExclude('README.md', '/test-project/README.md', mockRootPath)
     ).toBe(false);
-
-    // Restore original functions
-    require('fs').existsSync = originalExistsSync;
-    require('fs').readFileSync = originalReadFileSync;
   });
 
-  test('should work without .gitignore file', () => {
+  test('should work without .gitignore file', async () => {
     const mockRootPath = '/test-project-no-gitignore';
 
-    // Mock fs.existsSync to return false (no .gitignore)
-    const originalExistsSync = require('fs').existsSync;
-    require('fs').existsSync = jest.fn(() => false);
+    // Mock vscode.workspace.fs.readFile to throw (no .gitignore)
+    (vscode.workspace.fs.readFile as jest.Mock).mockRejectedValue(new Error('File not found'));
+
+    // Attempt to read gitignore (will return empty array)
+    await exclusionService.readGitignore(mockRootPath);
 
     // Should still exclude default patterns
     expect(
@@ -88,8 +83,5 @@ secret.key`;
         mockRootPath
       )
     ).toBe(false);
-
-    // Restore original function
-    require('fs').existsSync = originalExistsSync;
   });
 });

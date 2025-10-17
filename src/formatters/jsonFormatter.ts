@@ -59,6 +59,11 @@ export class JSONFormatter implements TreeFormatter {
         type: item.type,
       };
 
+      // Add icon if showIcons is enabled
+      if (options.showIcons) {
+        node.icon = item.type === 'folder' ? '📁' : this.getFileIcon(item.name);
+      }
+
       if (item.size !== undefined) {
         node.size = item.size;
       }
@@ -73,5 +78,54 @@ export class JSONFormatter implements TreeFormatter {
 
       return node;
     });
+  }
+
+  /**
+   * Get icon for file based on extension
+   */
+  private getFileIcon(filename: string): string {
+    const ext = path.extname(filename).toLowerCase();
+
+    // Check for specific filenames first
+    const basename = path.basename(filename).toLowerCase();
+    if (basename === 'package.json') return '📦';
+    if (basename === 'dockerfile' || basename === '.dockerignore') return '🐳';
+    if (basename.startsWith('.git')) return '📁';
+
+    // Check extensions
+    const iconMap: Record<string, string> = {
+      // JavaScript/TypeScript
+      '.js': '📜',
+      '.ts': '📘',
+      '.jsx': '⚛️',
+      '.tsx': '⚛️',
+
+      // Python
+      '.py': '🐍',
+
+      // Web
+      '.html': '🌐',
+      '.css': '🎨',
+      '.scss': '🎨',
+
+      // Config
+      '.json': '⚙️',
+      '.yaml': '⚙️',
+      '.yml': '⚙️',
+      '.toml': '⚙️',
+
+      // Docs
+      '.md': '📝',
+      '.txt': '📄',
+      '.pdf': '📕',
+
+      // Images
+      '.png': '🖼️',
+      '.jpg': '🖼️',
+      '.svg': '🖼️',
+      '.gif': '🖼️',
+    };
+
+    return iconMap[ext] || '📄';
   }
 }

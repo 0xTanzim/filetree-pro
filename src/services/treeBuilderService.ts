@@ -39,15 +39,25 @@ export class TreeBuilderService {
     maxDepth: number,
     rootPath: string,
     depth: number = 0,
-    progressCallback?: ProgressCallback
+    progressCallback?: ProgressCallback,
+    token?: vscode.CancellationToken
   ): Promise<FileTreeItem[]> {
+    // Check if operation was cancelled
+    if (token?.isCancellationRequested) {
+      return [];
+    }
+
     if (depth > maxDepth) {
       return [];
     }
 
     try {
-      if (progressCallback && depth === 0) {
-        progressCallback(`Building tree: ${path.basename(currentPath)}`);
+      // Pre-load .gitignore asynchronously (first time only)
+      if (depth === 0) {
+        await this.exclusionService.readGitignore(rootPath);
+        if (progressCallback) {
+          progressCallback(`Building tree: ${path.basename(currentPath)}`);
+        }
       }
 
       const items = await vscode.workspace.fs.readDirectory(vscode.Uri.file(currentPath));
@@ -82,7 +92,8 @@ export class TreeBuilderService {
           maxDepth,
           rootPath,
           depth + 1,
-          progressCallback
+          progressCallback,
+          token
         );
 
         result.push({
@@ -132,15 +143,25 @@ export class TreeBuilderService {
     maxDepth: number,
     showIcons: boolean,
     rootPath: string,
-    progressCallback?: ProgressCallback
+    progressCallback?: ProgressCallback,
+    token?: vscode.CancellationToken
   ): Promise<void> {
+    // Check if operation was cancelled
+    if (token?.isCancellationRequested) {
+      return;
+    }
+
     if (depth > maxDepth) {
       return;
     }
 
     try {
-      if (progressCallback && depth === 0) {
-        progressCallback(`Reading directory: ${path.basename(currentPath)}`);
+      // Pre-load .gitignore asynchronously (first time only)
+      if (depth === 0) {
+        await this.exclusionService.readGitignore(rootPath);
+        if (progressCallback) {
+          progressCallback(`Reading directory: ${path.basename(currentPath)}`);
+        }
       }
 
       const items = await vscode.workspace.fs.readDirectory(vscode.Uri.file(currentPath));
@@ -212,7 +233,8 @@ export class TreeBuilderService {
           maxDepth,
           showIcons,
           rootPath,
-          progressCallback
+          progressCallback,
+          token
         );
 
         // Yield control periodically

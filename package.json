@@ -2,7 +2,7 @@
   "name": "filetree-pro",
   "displayName": "FileTree Pro",
   "description": "A powerful file tree generator for VS Code and Cursor. Generate beautiful file trees in multiple formats with smart exclusions and custom configurations.",
-  "version": "0.1.99",
+  "version": "0.2.0",
   "publisher": "0xtanzim",
   "license": "MIT",
   "author": {
@@ -122,18 +122,26 @@
           "type": "boolean",
           "default": true,
           "description": "Respect .gitignore files when excluding files and folders from the tree"
+        },
+        "filetree-pro.maxDepth": {
+          "type": "number",
+          "default": 10,
+          "minimum": 1,
+          "maximum": 99,
+          "description": "Maximum depth to scan when generating file trees. Lower values are faster for large projects. (1=shallow, 5=medium, 10=deep)"
         }
       }
     }
   },
   "scripts": {
-    "vscode:prepublish": "tsc -p ./",
+    "vscode:prepublish": "npm run build",
     "compile": "tsc -p ./",
     "build": "webpack --mode=production",
     "test": "jest",
     "lint": "echo 'Linting temporarily disabled - will be fixed in future update'",
     "lint:fix": "echo 'Linting temporarily disabled - will be fixed in future update'",
-    "package": "node scripts/package-extension.js",
+    "package": "npx vsce package --no-dependencies",
+    "package:custom": "node scripts/package-extension.js",
     "publish": "@vscode/vsce publish",
     "clean": "rm -rf out dist temp_package *.vsix"
   },

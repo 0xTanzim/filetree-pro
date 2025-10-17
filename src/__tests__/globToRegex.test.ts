@@ -1,3 +1,4 @@
+import * as vscode from 'vscode';
 import { ExclusionService } from '../services/exclusionService';
 
 describe('🔍 globToRegex Pattern Matching', () => {
@@ -12,22 +13,18 @@ describe('🔍 globToRegex Pattern Matching', () => {
   });
 
   describe('Directory patterns ending with /', () => {
-    test('should match directory names correctly', () => {
+    test('should match directory names correctly', async () => {
       // Mock .gitignore with directory patterns
       const mockRootPath = '/test-project';
 
-      const originalExistsSync = require('fs').existsSync;
-      const originalReadFileSync = require('fs').readFileSync;
-
-      require('fs').existsSync = jest.fn((path: string) => {
-        return path.includes('.gitignore');
-      });
-
-      require('fs').readFileSync = jest.fn(() => {
-        return `temp-folder/
+      const mockContent = Buffer.from(`temp-folder/
 build-output/
-cache-dir/`;
-      });
+cache-dir/`);
+
+      (vscode.workspace.fs.readFile as jest.Mock).mockResolvedValue(mockContent);
+
+      // Pre-load gitignore patterns
+      await exclusionService.readGitignore(mockRootPath);
 
       // Test directory patterns
       expect(
@@ -51,29 +48,21 @@ cache-dir/`;
           mockRootPath
         )
       ).toBe(true);
-
-      // Restore original functions
-      require('fs').existsSync = originalExistsSync;
-      require('fs').readFileSync = originalReadFileSync;
     });
   });
 
   describe('Exact name patterns', () => {
-    test('should not match files with pattern names as substrings', () => {
+    test('should not match files with pattern names as substrings', async () => {
       const mockRootPath = '/test-project';
 
-      const originalExistsSync = require('fs').existsSync;
-      const originalReadFileSync = require('fs').readFileSync;
-
-      require('fs').existsSync = jest.fn((path: string) => {
-        return path.includes('.gitignore');
-      });
-
-      require('fs').readFileSync = jest.fn(() => {
-        return `checkout
+      const mockContent = Buffer.from(`checkout
 layout
-temp`;
-      });
+temp`);
+
+      (vscode.workspace.fs.readFile as jest.Mock).mockResolvedValue(mockContent);
+
+      // Pre-load gitignore patterns
+      await exclusionService.readGitignore(mockRootPath);
 
       // These should NOT be excluded (files containing pattern names)
       expect(
@@ -102,10 +91,6 @@ temp`;
         true
       );
       expect(exclusionService.shouldExclude('temp', '/test-project/temp', mockRootPath)).toBe(true);
-
-      // Restore original functions
-      require('fs').existsSync = originalExistsSync;
-      require('fs').readFileSync = originalReadFileSync;
     });
   });
 
