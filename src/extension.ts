@@ -145,8 +145,8 @@ export async function deactivate(): Promise<void> {
 }
 
 /**
- * Shows welcome message to first-time users.
- * Provides quick start guidance and feature highlights.
+ * Marks first run for future feature updates.
+ * Does NOT show notifications as they block critical UI dialogs.
  *
  * @param context - Extension context for state management
  */
@@ -154,27 +154,9 @@ async function showWelcomeMessage(context: vscode.ExtensionContext): Promise<voi
   const isFirstRun = context.globalState.get('filetree-pro.firstRun', true);
 
   if (isFirstRun) {
-    const selection = await vscode.window.showInformationMessage(
-      'Welcome to FileTree Pro! 🌳 Generate beautiful file trees for documentation.',
-      'Quick Start',
-      'Learn More',
-      'Dismiss'
-    );
-
-    if (selection === 'Quick Start') {
-      await vscode.window.showInformationMessage(
-        'Right-click any folder in Explorer and select "Generate File Tree" to get started!'
-      );
-    } else if (selection === 'Learn More') {
-      await vscode.window.showInformationMessage(
-        'FileTree Pro Features:\n' +
-          '✨ Smart file tree generation\n' +
-          '📊 Project analytics\n' +
-          '🤖 AI-powered insights (with GitHub Copilot)\n' +
-          '🎨 Multiple export formats (Markdown, JSON, SVG)'
-      );
-    }
-
+    // Just mark as not first run - don't show notifications
+    // Notifications block subsequent showQuickPick dialogs in VS Code
+    // Users can find help in README and extension landing page
     await context.globalState.update('filetree-pro.firstRun', false);
   }
 }

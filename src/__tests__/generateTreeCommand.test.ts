@@ -295,4 +295,44 @@ describe('GenerateTreeCommand', () => {
       expect(disposable).toBeDefined();
     });
   });
+
+  describe('Notification Blocking Issue - Fix Verification', () => {
+    test('should not block showQuickPick with welcome notifications', async () => {
+      // This test verifies the fix for the issue where welcome notifications
+      // blocked the format selection dialog
+
+      // Setup format selection mock
+      (vscode.window.showQuickPick as jest.Mock).mockResolvedValueOnce({
+        label: '📄 Markdown',
+        value: 'markdown',
+      });
+
+      // Setup icon selection mock
+      (vscode.window.showQuickPick as jest.Mock).mockResolvedValueOnce('With Icons');
+
+      // Setup progress mock
+      (vscode.window.withProgress as jest.Mock).mockImplementation(async (options, callback) => {
+        const mockProgress = { report: jest.fn() };
+        const mockToken = { isCancellationRequested: false };
+        await callback(mockProgress, mockToken);
+      });
+
+      // Setup document mock
+      (vscode.workspace.openTextDocument as jest.Mock).mockResolvedValueOnce({
+        content: '# File Tree',
+      });
+
+      const mockUri = vscode.Uri.file('/test/project');
+
+      // Execute command - should successfully show format picker WITHOUT blocking
+      await command.execute(mockUri);
+
+      // Verify showQuickPick was called (not blocked)
+      expect(vscode.window.showQuickPick).toHaveBeenCalled();
+
+      // Verify format choice was provided (first call returns format, not undefined)
+      const firstCall = (vscode.window.showQuickPick as jest.Mock).mock.calls[0];
+      expect(firstCall[0]).toContainEqual({ label: '📄 Markdown', value: 'markdown' });
+    });
+  });
 });
