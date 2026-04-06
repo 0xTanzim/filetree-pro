@@ -66,6 +66,10 @@
         "title": "Generate File Tree"
       },
       {
+        "command": "filetree-pro.generateWorkspaceTree",
+        "title": "Generate Tree for Workspace"
+      },
+      {
         "command": "filetree-pro.convertTextToTree",
         "title": "Convert Text to Tree"
       }
