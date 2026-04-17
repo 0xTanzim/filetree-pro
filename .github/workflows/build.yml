@@ -126,6 +126,7 @@ jobs:
       run: |
         npm install -g @vscode/vsce
         npm install -g ovsx
+        npm ci
 
     - name: 📥 Download VSIX artifact
       uses: actions/download-artifact@v4
@@ -133,19 +134,83 @@ jobs:
         name: extension-vsix
         path: ./
 
+    - name: 🔍 Check version and auto-bump if needed
+      id: version-check
+      run: |
+        set -e
+
+        CURRENT_VERSION="${{ needs.package.outputs.version }}"
+        DOWNLOADED_VSIX="${{ needs.package.outputs.vsix-path }}"
+
+        echo "📋 Packaged version: $CURRENT_VERSION"
+        echo "📦 Downloaded VSIX:  $DOWNLOADED_VSIX"
+
+        # Query all published versions from VS Code Marketplace (public, no auth needed).
+        # If the API is unavailable, PUBLISHED will be empty and we proceed without bumping
+        # (same behaviour as before this guard was added).
+        PUBLISHED=$(curl -sf -X POST \
+          "https://marketplace.visualstudio.com/_apis/public/gallery/extensionquery?api-version=3.0-preview.1" \
+          -H "Content-Type: application/json;charset=UTF-8" \
+          -H "Accept: application/json;api-version=3.0-preview.1" \
+          -d '{"filters":[{"criteria":[{"filterType":7,"value":"0xtanzim.filetree-pro"}]}],"flags":514}' \
+          | jq -r '.results[0].extensions[0].versions[].version' 2>/dev/null || echo "")
+
+        if [ -z "$PUBLISHED" ]; then
+          echo "ℹ️  No published versions found (new extension or marketplace unavailable) – no bump needed."
+        else
+          echo "📜 Versions currently on marketplace:"
+          echo "$PUBLISHED"
+        fi
+
+        IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT_VERSION"
+        FINAL_VERSION="$CURRENT_VERSION"
+        FINAL_VSIX="$DOWNLOADED_VSIX"
+
+        if echo "$PUBLISHED" | grep -qx "$CURRENT_VERSION"; then
+          echo "⚠️  Version $CURRENT_VERSION already exists on the marketplace. Auto-bumping patch..."
+          MAX_BUMPS=20
+          BUMP_COUNT=0
+          while echo "$PUBLISHED" | grep -qx "${MAJOR}.${MINOR}.${PATCH}"; do
+            PATCH=$((PATCH + 1))
+            BUMP_COUNT=$((BUMP_COUNT + 1))
+            if [ "$BUMP_COUNT" -ge "$MAX_BUMPS" ]; then
+              echo "❌ Exceeded $MAX_BUMPS bump attempts. Manual intervention required."
+              exit 1
+            fi
+          done
+          FINAL_VERSION="${MAJOR}.${MINOR}.${PATCH}"
+          echo "🔄 Bumped version: $CURRENT_VERSION → $FINAL_VERSION"
+
+          # Update package.json ephemeral (not committed back to repo)
+          npm version "$FINAL_VERSION" --no-git-tag-version
+
+          # Rebuild and repackage with the new version
+          npm run build
+          vsce package --out "filetree-pro-${FINAL_VERSION}.vsix"
+          FINAL_VSIX="filetree-pro-${FINAL_VERSION}.vsix"
+          echo "📦 Repackaged VSIX: $FINAL_VSIX"
+        else
+          echo "✅ Version $CURRENT_VERSION is unique – no bump needed."
+        fi
+
+        echo "🎯 Final version : $FINAL_VERSION"
+        echo "📦 Final VSIX    : $FINAL_VSIX"
+        echo "final-version=${FINAL_VERSION}" >> $GITHUB_OUTPUT
+        echo "final-vsix=${FINAL_VSIX}" >> $GITHUB_OUTPUT
+
     - name: 🏪 Publish to VS Code Marketplace
       env:
         VSCE_PAT: ${{ secrets.VSCE_PAT }}
       run: |
-        echo "🏪 Publishing to VS Code Marketplace..."
-        vsce publish --packagePath ${{ needs.package.outputs.vsix-path }}
+        echo "🏪 Publishing version ${{ steps.version-check.outputs.final-version }} to VS Code Marketplace..."
+        vsce publish --packagePath ${{ steps.version-check.outputs.final-vsix }}
 
     - name: 🌐 Publish to Open VSX Registry
       env:
         OVSX_PAT: ${{ secrets.OVSX_PAT }}
       run: |
-        echo "🌐 Publishing to Open VSX Registry..."
-        ovsx publish ${{ needs.package.outputs.vsix-path }} -p $OVSX_PAT
+        echo "🌐 Publishing version ${{ steps.version-check.outputs.final-version }} to Open VSX Registry..."
+        ovsx publish ${{ steps.version-check.outputs.final-vsix }} -p $OVSX_PAT
 
     - name: ✅ Publishing Complete
       run: |
