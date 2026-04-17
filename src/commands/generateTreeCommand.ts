@@ -178,6 +178,47 @@ export class GenerateTreeCommand {
   }
 
   /**
+   * Execute the generate workspace tree command
+   * Uses the workspace root URI directly, without requiring a right-click
+   */
+  async executeForWorkspace(): Promise<void> {
+    const workspaceFolders = vscode.workspace.workspaceFolders;
+
+    if (!workspaceFolders || workspaceFolders.length === 0) {
+      vscode.window.showErrorMessage(
+        'No workspace folder is open. Please open a folder first.'
+      );
+      return;
+    }
+
+    let workspaceUri: vscode.Uri;
+
+    if (workspaceFolders.length === 1) {
+      workspaceUri = workspaceFolders[0].uri;
+    } else {
+      // Multiple workspace folders — let user pick one
+      const choices = workspaceFolders.map(folder => ({
+        label: folder.name,
+        description: folder.uri.fsPath,
+        uri: folder.uri,
+      }));
+
+      const selected = await vscode.window.showQuickPick(choices, {
+        placeHolder: 'Select workspace folder to generate tree for',
+        canPickMany: false,
+      });
+
+      if (!selected) {
+        return; // User cancelled
+      }
+
+      workspaceUri = selected.uri;
+    }
+
+    await this.execute(workspaceUri);
+  }
+
+  /**
    * Register the command with VS Code
    * @param context - Extension context
    * @returns Disposable
@@ -189,6 +230,22 @@ export class GenerateTreeCommand {
     const command = new GenerateTreeCommand(treeBuilderService);
     return vscode.commands.registerCommand('filetree-pro.generateFileTree', (uri: vscode.Uri) =>
       command.execute(uri)
+    );
+  }
+
+  /**
+   * Register the workspace tree command with VS Code
+   * @param context - Extension context
+   * @param treeBuilderService - Tree builder service instance
+   * @returns Disposable
+   */
+  static registerWorkspaceCommand(
+    context: vscode.ExtensionContext,
+    treeBuilderService: TreeBuilderService
+  ): vscode.Disposable {
+    const command = new GenerateTreeCommand(treeBuilderService);
+    return vscode.commands.registerCommand('filetree-pro.generateWorkspaceTree', () =>
+      command.executeForWorkspace()
     );
   }
 }

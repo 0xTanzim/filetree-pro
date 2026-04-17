@@ -32,6 +32,9 @@ export function registerCommands(
   // Register Generate Tree Command
   disposables.push(GenerateTreeCommand.register(context, treeBuilderService));
 
+  // Register Generate Workspace Tree Command
+  disposables.push(GenerateTreeCommand.registerWorkspaceCommand(context, treeBuilderService));
+
   // Register Convert Text Command
   disposables.push(ConvertTextCommand.register(context));
 

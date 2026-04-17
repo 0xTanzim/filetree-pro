@@ -294,6 +294,121 @@ describe('GenerateTreeCommand', () => {
       );
       expect(disposable).toBeDefined();
     });
+
+    test('should register workspace command with VS Code', () => {
+      const mockContext = {
+        subscriptions: [],
+        extensionPath: '/test/extension',
+      } as any;
+
+      const disposable = GenerateTreeCommand.registerWorkspaceCommand(
+        mockContext,
+        mockTreeBuilderService
+      );
+
+      expect(vscode.commands.registerCommand).toHaveBeenCalledWith(
+        'filetree-pro.generateWorkspaceTree',
+        expect.any(Function)
+      );
+      expect(disposable).toBeDefined();
+    });
+  });
+
+  describe('Workspace Tree Generation', () => {
+    test('should show error when no workspace folder is open', async () => {
+      (vscode.workspace as any).workspaceFolders = undefined;
+
+      await command.executeForWorkspace();
+
+      expect(vscode.window.showErrorMessage).toHaveBeenCalledWith(
+        'No workspace folder is open. Please open a folder first.'
+      );
+      expect(mockTreeBuilderService.buildFileTreeItems).not.toHaveBeenCalled();
+    });
+
+    test('should show error when workspace folders array is empty', async () => {
+      (vscode.workspace as any).workspaceFolders = [];
+
+      await command.executeForWorkspace();
+
+      expect(vscode.window.showErrorMessage).toHaveBeenCalledWith(
+        'No workspace folder is open. Please open a folder first.'
+      );
+    });
+
+    test('should use single workspace folder without prompting', async () => {
+      (vscode.workspace as any).workspaceFolders = [
+        { uri: vscode.Uri.file('/test/workspace'), name: 'workspace', index: 0 },
+      ];
+
+      setupSuccessfulMocks();
+
+      await command.executeForWorkspace();
+
+      // Should NOT prompt for folder selection (only format + icon QuickPicks)
+      expect(vscode.window.showQuickPick).toHaveBeenCalledTimes(2);
+      expect(mockTreeBuilderService.buildFileTreeItems).toHaveBeenCalledWith(
+        '/test/workspace',
+        expect.any(Number),
+        '/test/workspace',
+        0,
+        expect.any(Function)
+      );
+    });
+
+    test('should prompt to select folder when multiple workspaces are open', async () => {
+      const folder1Uri = vscode.Uri.file('/test/workspace1');
+      const folder2Uri = vscode.Uri.file('/test/workspace2');
+      (vscode.workspace as any).workspaceFolders = [
+        { uri: folder1Uri, name: 'workspace1', index: 0 },
+        { uri: folder2Uri, name: 'workspace2', index: 1 },
+      ];
+
+      // First QuickPick: folder selection; then format + icon selections
+      (vscode.window.showQuickPick as jest.Mock)
+        .mockResolvedValueOnce({ label: 'workspace1', description: '/test/workspace1', uri: folder1Uri })
+        .mockResolvedValueOnce({ label: '📄 Markdown', value: 'markdown' })
+        .mockResolvedValueOnce('With Icons');
+
+      (vscode.window.withProgress as jest.Mock).mockImplementation(async (options, task) => {
+        const progress = { report: jest.fn() };
+        const token = { isCancellationRequested: false, onCancellationRequested: jest.fn() };
+        return task(progress, token);
+      });
+
+      (vscode.workspace.openTextDocument as jest.Mock).mockResolvedValue({
+        uri: vscode.Uri.file('/test/output.md'),
+        languageId: 'markdown',
+        getText: jest.fn().mockReturnValue('# Mock content'),
+      });
+
+      (vscode.window.showTextDocument as jest.Mock).mockResolvedValue({});
+
+      await command.executeForWorkspace();
+
+      // First QuickPick should be for folder selection
+      const firstQuickPickCall = (vscode.window.showQuickPick as jest.Mock).mock.calls[0];
+      expect(firstQuickPickCall[0]).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ label: 'workspace1' }),
+          expect.objectContaining({ label: 'workspace2' }),
+        ])
+      );
+    });
+
+    test('should cancel when user dismisses folder selection in multi-workspace', async () => {
+      (vscode.workspace as any).workspaceFolders = [
+        { uri: vscode.Uri.file('/test/workspace1'), name: 'workspace1', index: 0 },
+        { uri: vscode.Uri.file('/test/workspace2'), name: 'workspace2', index: 1 },
+      ];
+
+      (vscode.window.showQuickPick as jest.Mock).mockResolvedValueOnce(undefined);
+
+      await command.executeForWorkspace();
+
+      // Should not proceed to tree generation
+      expect(mockTreeBuilderService.buildFileTreeItems).not.toHaveBeenCalled();
+    });
   });
 
   describe('Notification Blocking Issue - Fix Verification', () => {
