@@ -1,5 +1,12 @@
 ## 📝 Changelog
 
+### v0.2.2 - Workspace tree usability
+
+- **Generate File Tree** from the Command Palette now targets the **workspace root** when no folder URI is passed (same behavior as **Generate Tree for Workspace** for single-folder workspaces; multi-root still prompts to pick a folder).
+- **maxDepth** from `filetree-pro.maxDepth` is now applied when generating trees (previously a fixed depth was used in the command path).
+- **File Tree Pro** view title: toolbar action to **Generate Tree for Workspace** (list icon).
+- Commands use the **File Tree Pro** category in the Command Palette; README and architecture docs updated for workspace vs Explorer folder usage.
+
 ### v0.2.0 - Comprehensive Testing & Quality Assurance
 
 **🎉 Major Testing Milestone: 234 Tests, 100% Pass Rate**

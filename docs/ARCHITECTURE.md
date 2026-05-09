@@ -156,18 +156,17 @@ export function deactivate() {
 
 ---
 
-### 2. **Command Layer** (`src/commands/commands.ts`)
+### 2. **Command Layer** (`src/commands/commandRegistry.ts`, `src/commands/generateTreeCommand.ts`)
 
 **Purpose:** Handle user actions and orchestrate operations
 
 **Commands:**
 
-| Command             | Trigger                   | Action             |
-| ------------------- | ------------------------- | ------------------ |
-| `generateTree`      | Right-click folder        | Generate file tree |
-| `convertTextToTree` | Select text + right-click | Convert to tree    |
-| `refreshTree`       | Refresh button            | Regenerate tree    |
-| `exportTree`        | Export button             | Export in format   |
+| Command ID                             | Trigger                                                                                      | Action                                                                                    |
+| -------------------------------------- | -------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| `filetree-pro.generateFileTree`      | Explorer context menu on a folder; Command Palette (no URI → workspace root / multi-root) | Build tree for the chosen folder or whole workspace                                     |
+| `filetree-pro.generateWorkspaceTree`   | Command Palette; **File Tree Pro** view title (toolbar)                                       | Build tree for workspace root (multi-root: quick-pick folder)                           |
+| `filetree-pro.convertTextToTree`     | Editor context with selection                                                               | Convert selected text to a tree                                                           |
 
 **Flow:**
 

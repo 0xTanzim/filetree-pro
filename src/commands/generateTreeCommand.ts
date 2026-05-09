@@ -25,13 +25,15 @@ export class GenerateTreeCommand {
   async execute(uri: vscode.Uri): Promise<void> {
     try {
       if (!uri) {
-        vscode.window.showErrorMessage('Please right-click on a folder to generate file tree');
+        await this.executeForWorkspace();
         return;
       }
 
       // Get the folder path
       const folderPath = uri.fsPath;
       const folderName = path.basename(folderPath);
+      const config = vscode.workspace.getConfiguration('filetree-pro');
+      const maxDepth = config.get<number>('maxDepth', 10);
 
       // Ask user for format preference
       const formatChoice = await vscode.window.showQuickPick(
@@ -82,7 +84,7 @@ export class GenerateTreeCommand {
         // Generate the file tree with progress callback
         const treeContent = await this.generateFileTree(
           folderPath,
-          10,
+          maxDepth,
           useIcons,
           formatChoice.value,
           (message: string, increment?: number) => {

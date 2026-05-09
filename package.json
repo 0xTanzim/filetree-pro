@@ -2,7 +2,7 @@
   "name": "filetree-pro",
   "displayName": "FileTree Pro",
   "description": "A powerful file tree generator for VS Code and Cursor. Generate beautiful file trees in multiple formats with smart exclusions and custom configurations.",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "publisher": "0xtanzim",
   "license": "MIT",
   "author": {
@@ -63,18 +63,29 @@
     "commands": [
       {
         "command": "filetree-pro.generateFileTree",
-        "title": "Generate File Tree"
+        "title": "Generate File Tree",
+        "category": "File Tree Pro"
       },
       {
         "command": "filetree-pro.generateWorkspaceTree",
-        "title": "Generate Tree for Workspace"
+        "title": "Generate Tree for Workspace",
+        "category": "File Tree Pro",
+        "icon": "$(list-tree)"
       },
       {
         "command": "filetree-pro.convertTextToTree",
-        "title": "Convert Text to Tree"
+        "title": "Convert Text to Tree",
+        "category": "File Tree Pro"
       }
     ],
     "menus": {
+      "view/title": [
+        {
+          "command": "filetree-pro.generateWorkspaceTree",
+          "when": "view == filetree-pro-view",
+          "group": "navigation@1"
+        }
+      ],
       "explorer/context": [
         {
           "command": "filetree-pro.generateFileTree",

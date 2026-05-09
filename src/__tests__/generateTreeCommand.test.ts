@@ -81,11 +81,32 @@ describe('GenerateTreeCommand', () => {
   };
 
   describe('Command Execution', () => {
-    test('should show error when URI is not provided', async () => {
+    test('should delegate to workspace when URI is not provided', async () => {
+      (vscode.workspace as any).workspaceFolders = [
+        { uri: vscode.Uri.file('/test/workspace'), name: 'workspace', index: 0 },
+      ];
+
+      setupSuccessfulMocks();
+
+      await command.execute(undefined as any);
+
+      expect(vscode.window.showQuickPick).toHaveBeenCalledTimes(2);
+      expect(mockTreeBuilderService.buildFileTreeItems).toHaveBeenCalledWith(
+        '/test/workspace',
+        expect.any(Number),
+        '/test/workspace',
+        0,
+        expect.any(Function)
+      );
+    });
+
+    test('should show error when URI is not provided and no workspace is open', async () => {
+      (vscode.workspace as any).workspaceFolders = undefined;
+
       await command.execute(undefined as any);
 
       expect(vscode.window.showErrorMessage).toHaveBeenCalledWith(
-        'Please right-click on a folder to generate file tree'
+        'No workspace folder is open. Please open a folder first.'
       );
       expect(mockTreeBuilderService.buildFileTreeItems).not.toHaveBeenCalled();
     });
@@ -192,10 +213,35 @@ describe('GenerateTreeCommand', () => {
       // Verify buildFileTreeItems was called with progress callback
       expect(mockTreeBuilderService.buildFileTreeItems).toHaveBeenCalledWith(
         expect.any(String), // rootPath
-        10, // maxDepth
+        10, // maxDepth (default from mocked config)
         expect.any(String), // rootPath again
         0, // depth
         expect.any(Function) // progressCallback
+      );
+    });
+
+    test('should use filetree-pro.maxDepth from settings', async () => {
+      setupSuccessfulMocks('markdown', true);
+      (vscode.workspace.getConfiguration as jest.Mock).mockImplementation(() => ({
+        get: jest.fn((key: string, defaultValue: unknown) => {
+          if (key === 'maxDepth') return 7;
+          if (key === 'showIcons') return true;
+          return defaultValue;
+        }),
+        has: jest.fn(() => true),
+        inspect: jest.fn(),
+        update: jest.fn(),
+      }));
+
+      const mockUri = vscode.Uri.file('/test/project');
+      await command.execute(mockUri);
+
+      expect(mockTreeBuilderService.buildFileTreeItems).toHaveBeenCalledWith(
+        '/test/project',
+        7,
+        '/test/project',
+        0,
+        expect.any(Function)
       );
     });
 

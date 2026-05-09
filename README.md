@@ -186,14 +186,15 @@ Watch this quick demo to see FileTree Pro in action:
 
 [![Short Demo](https://img.youtube.com/vi/EvgOWywtJjU/hqdefault.jpg)](https://youtu.be/EvgOWywtJjU)
 
-_Video shows: Right-click on folder → Generate File Tree → Choose format → View beautiful tree output_
+_The demo covers right-click on a folder; you can also run **File Tree Pro: Generate File Tree** from the Command Palette (uses the whole workspace) or use the list icon on the **File Tree Pro** view title._
 
 ## 📋 Commands
 
-- `Generate File Tree` - Right-click on folder to generate tree
-- `Convert Text to Tree` - Select text and convert to tree format
-- `Refresh Tree` - Regenerate with current settings
-- `Export Tree` - Export in different formats
+- **File Tree Pro: Generate File Tree** (`filetree-pro.generateFileTree`) — Right-click a **folder node** in the Explorer (not the Explorer section header) to generate a tree for that folder. From the Command Palette, runs on the **workspace root** (single-folder) or prompts you to pick a folder (multi-root).
+- **File Tree Pro: Generate Tree for Workspace** (`filetree-pro.generateWorkspaceTree`) — Same workspace-root flow from the palette; also available as the **Generate Tree for Workspace** button (list icon) on the **File Tree Pro** sidebar view title.
+- **File Tree Pro: Convert Text to Tree** (`filetree-pro.convertTextToTree`) — Select text in an editor and convert it to tree format.
+
+**Tip:** In the Explorer, right-click the actual **root folder row** under your workspace name, not the ALL CAPS workspace section header (that bar is VS Code’s own menu).
 
 ## 🎨 Examples
 

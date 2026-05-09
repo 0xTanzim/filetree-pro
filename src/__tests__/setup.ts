@@ -24,6 +24,7 @@ declare global {
           respectGitignore: true,
           useCopilot: true,
           maxDepth: 10,
+          showIcons: true,
           showFileSize: true,
           showFileDate: false,
           enableSearch: true,

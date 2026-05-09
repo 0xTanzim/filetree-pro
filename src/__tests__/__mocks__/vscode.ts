@@ -7,6 +7,7 @@ const workspace = {
         respectGitignore: true,
         useCopilot: true,
         maxDepth: 10,
+        showIcons: true,
         showFileSize: true,
         showFileDate: false,
         enableSearch: true,
@@ -177,7 +178,7 @@ export {
   Uri,
   ViewColumn,
   window,
-  workspace,
+  workspace
 };
 
 export default {
