@@ -1,5 +1,10 @@
 ## 📝 Changelog
 
+### v0.2.4 - Marketplace patch release
+
+- Version bump only — publishes the `v0.2.3` fixes (exclusion glob engine rewrite,
+  `maxDepth` default raised to 15) to the VS Code Marketplace under `0.2.4`.
+
 ### v0.2.3 - Exclusion pattern engine rewrite
 
 - **Glob matching rewritten**: `exclusionService.ts`'s `globToRegex` now walks the pattern
