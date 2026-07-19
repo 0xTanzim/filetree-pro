@@ -25,7 +25,7 @@ Add this to your VS Code settings (`Ctrl/Cmd + ,`):
 
 ```json
 {
-  "filetree-pro.maxDepth": 10,
+  "filetree-pro.maxDepth": 15,
   "filetree-pro.exclude": [
     "**/node_modules/**",
     "**/dist/**",

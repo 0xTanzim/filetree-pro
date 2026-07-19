@@ -11,6 +11,8 @@ import * as vscode from 'vscode';
 import { FormatterFactory, FormatterType } from '../formatters';
 import { TreeBuilderService } from '../services/treeBuilderService';
 
+const DEFAULT_MAX_DEPTH = 15;
+
 /**
  * Generate file tree command handler
  * Implements Single Responsibility Principle
@@ -33,7 +35,7 @@ export class GenerateTreeCommand {
       const folderPath = uri.fsPath;
       const folderName = path.basename(folderPath);
       const config = vscode.workspace.getConfiguration('filetree-pro');
-      const maxDepth = config.get<number>('maxDepth', 10);
+      const maxDepth = config.get<number>('maxDepth', DEFAULT_MAX_DEPTH);
 
       // Ask user for format preference
       const formatChoice = await vscode.window.showQuickPick(
@@ -132,7 +134,7 @@ export class GenerateTreeCommand {
    */
   private async generateFileTree(
     rootPath: string,
-    maxDepth: number = 10,
+    maxDepth: number = DEFAULT_MAX_DEPTH,
     forceShowIcons?: boolean,
     format: string = 'markdown',
     progressCallback?: (message: string, increment?: number) => void
@@ -187,9 +189,7 @@ export class GenerateTreeCommand {
     const workspaceFolders = vscode.workspace.workspaceFolders;
 
     if (!workspaceFolders || workspaceFolders.length === 0) {
-      vscode.window.showErrorMessage(
-        'No workspace folder is open. Please open a folder first.'
-      );
+      vscode.window.showErrorMessage('No workspace folder is open. Please open a folder first.');
       return;
     }
 

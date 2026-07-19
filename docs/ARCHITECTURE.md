@@ -162,11 +162,11 @@ export function deactivate() {
 
 **Commands:**
 
-| Command ID                             | Trigger                                                                                      | Action                                                                                    |
-| -------------------------------------- | -------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| `filetree-pro.generateFileTree`      | Explorer context menu on a folder; Command Palette (no URI → workspace root / multi-root) | Build tree for the chosen folder or whole workspace                                     |
-| `filetree-pro.generateWorkspaceTree`   | Command Palette; **File Tree Pro** view title (toolbar)                                       | Build tree for workspace root (multi-root: quick-pick folder)                           |
-| `filetree-pro.convertTextToTree`     | Editor context with selection                                                               | Convert selected text to a tree                                                           |
+| Command ID                           | Trigger                                                                                   | Action                                                        |
+| ------------------------------------ | ----------------------------------------------------------------------------------------- | ------------------------------------------------------------- |
+| `filetree-pro.generateFileTree`      | Explorer context menu on a folder; Command Palette (no URI → workspace root / multi-root) | Build tree for the chosen folder or whole workspace           |
+| `filetree-pro.generateWorkspaceTree` | Command Palette; **File Tree Pro** view title (toolbar)                                   | Build tree for workspace root (multi-root: quick-pick folder) |
+| `filetree-pro.convertTextToTree`     | Editor context with selection                                                             | Convert selected text to a tree                               |
 
 **Flow:**
 
@@ -415,7 +415,7 @@ sequenceDiagram
 {
   "filetree-pro.maxDepth": {
     "type": "number",
-    "default": 10,
+    "default": 15,
     "minimum": 1,
     "maximum": 99,
     "description": "Maximum depth to scan when generating file trees"

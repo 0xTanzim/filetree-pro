@@ -1,5 +1,18 @@
 ## 📝 Changelog
 
+### v0.2.3 - Exclusion pattern engine rewrite
+
+- **Glob matching rewritten**: `exclusionService.ts`'s `globToRegex` now walks the pattern
+  character-by-character (proper `**`, `*`, `?` handling, root-anchored `/pattern` support)
+  instead of chained string replacements — fixes edge cases in nested/mixed wildcard patterns.
+- Exclusion matching now resolves paths **relative to the workspace root** before testing
+  patterns, so root-anchored and relative exclude patterns behave consistently.
+- Default excludes gained `cache/`, `temp/`, `tmp/` explicitly (previously only matched via a
+  separate hardcoded check that's now folded into the same pattern list).
+- **maxDepth** default raised from 10 → 15 (`filetree-pro.maxDepth`), matching the "Depth Guide"
+  documented in the README.
+- Added regression tests for the new glob engine and `.gitignore` interplay.
+
 ### v0.2.2 - Workspace tree usability
 
 - **Generate File Tree** from the Command Palette now targets the **workspace root** when no folder URI is passed (same behavior as **Generate Tree for Workspace** for single-folder workspaces; multi-root still prompts to pick a folder).

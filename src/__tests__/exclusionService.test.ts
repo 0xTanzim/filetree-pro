@@ -63,6 +63,54 @@ describe('ExclusionService', () => {
       expect(regex.test('/src/lib/test')).toBe(false);
     });
 
+    test('should apply ? wildcards through exclusion rules', async () => {
+      const rootPath = '/test-project';
+      (vscode.workspace.fs.readFile as jest.Mock).mockResolvedValue(Buffer.from('artifact?\n'));
+      await exclusionService.readGitignore(rootPath);
+
+      expect(exclusionService.shouldExclude('artifactX', `${rootPath}/artifactX`, rootPath)).toBe(
+        true
+      );
+      expect(exclusionService.shouldExclude('artifact', `${rootPath}/artifact`, rootPath)).toBe(
+        false
+      );
+      expect(exclusionService.shouldExclude('artifactXY', `${rootPath}/artifactXY`, rootPath)).toBe(
+        false
+      );
+    });
+
+    test('should compose ? within extension globs through exclusion rules', async () => {
+      const rootPath = '/test-project';
+      (vscode.workspace.fs.readFile as jest.Mock).mockResolvedValue(Buffer.from('*.?s\n'));
+      await exclusionService.readGitignore(rootPath);
+
+      expect(exclusionService.shouldExclude('main.ts', `${rootPath}/main.ts`, rootPath)).toBe(true);
+      expect(exclusionService.shouldExclude('main.css', `${rootPath}/main.css`, rootPath)).toBe(
+        false
+      );
+    });
+
+    test('should anchor leading-slash patterns to the scan root', async () => {
+      const rootPath = '/test-project';
+      (vscode.workspace.fs.readFile as jest.Mock).mockResolvedValue(
+        Buffer.from('/build/*.js\n/*.ts\n')
+      );
+      await exclusionService.readGitignore(rootPath);
+
+      expect(exclusionService.shouldExclude('main.js', `${rootPath}/build/main.js`, rootPath)).toBe(
+        true
+      );
+      expect(
+        exclusionService.shouldExclude('main.js', `${rootPath}/packages/build/main.js`, rootPath)
+      ).toBe(false);
+      expect(exclusionService.shouldExclude('index.ts', `${rootPath}/index.ts`, rootPath)).toBe(
+        true
+      );
+      expect(
+        exclusionService.shouldExclude('index.ts', `${rootPath}/packages/index.ts`, rootPath)
+      ).toBe(false);
+    });
+
     test('should handle exact name patterns', () => {
       const regex = exclusionService.globToRegex('checkout');
       expect(regex.test('checkout')).toBe(true);
@@ -82,6 +130,12 @@ describe('ExclusionService', () => {
 
     test('should exclude dist', () => {
       expect(exclusionService.shouldExclude('dist')).toBe(true);
+    });
+
+    test('should exclude common temporary directories', () => {
+      expect(exclusionService.shouldExclude('cache')).toBe(true);
+      expect(exclusionService.shouldExclude('temp')).toBe(true);
+      expect(exclusionService.shouldExclude('tmp')).toBe(true);
     });
 
     test('should exclude .venv', () => {

@@ -52,7 +52,7 @@ export class ExclusionService {
    * Convert glob pattern to RegExp
    * Supports *, **, ? wildcards
    *
-   * @param pattern - Glob pattern (e.g., "*.log", "**​/node_modules/**")
+   * @param pattern - Glob pattern (e.g., "*.log" or a recursive node_modules pattern)
    * @returns RegExp for matching
    *
    * @example
@@ -62,38 +62,41 @@ export class ExclusionService {
    * ```
    */
   globToRegex(pattern: string): RegExp {
-    // Handle file extension patterns FIRST (before escaping)
-    if (pattern.startsWith('*.') && !pattern.includes('/')) {
-      const extension = pattern.slice(1); // Remove the *
-      const escapedExt = extension.replace(/\./g, '\\.');
-      return new RegExp(`${escapedExt}$`, 'i');
+    const normalizedPattern = pattern.replace(/\\/g, '/');
+    const isDirectoryPattern = normalizedPattern.endsWith('/');
+    const isRootPattern = normalizedPattern.startsWith('/');
+    const patternBody = normalizedPattern.replace(/^\/|\/$/g, '');
+    let regexPattern = '';
+
+    for (let index = 0; index < patternBody.length; index++) {
+      const character = patternBody[index];
+
+      if (character === '*') {
+        if (patternBody[index + 1] === '*') {
+          while (patternBody[index + 1] === '*') {
+            index++;
+          }
+          if (patternBody[index + 1] === '/') {
+            regexPattern += '(?:.*/)?';
+            index++;
+          } else {
+            regexPattern += '.*';
+          }
+        } else {
+          regexPattern += '[^/]*';
+        }
+      } else if (character === '?') {
+        regexPattern += '[^/]';
+      } else {
+        regexPattern += character.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      }
     }
 
-    // Handle directory patterns ending with /
-    if (pattern.endsWith('/')) {
-      const dirName = pattern.slice(0, -1);
-      const escapedDirName = dirName.replace(/[.+^${}()|[\]\\]/g, '\\$&');
-      return new RegExp(`(^|/)${escapedDirName}(/|$)`, 'i');
-    }
+    const prefix = isRootPattern ? '^' : '(^|/)';
+    const hasWildcard = patternBody.includes('*') || patternBody.includes('?');
+    const suffix = isDirectoryPattern || !hasWildcard ? '(/|$)' : '$';
 
-    // Escape special regex characters except for our glob patterns
-    let regexPattern = pattern
-      .replace(/[.+^${}()|[\]\\]/g, '\\$&') // Escape regex special chars
-      .replace(/\\\*/g, '__STAR__') // Temporarily replace escaped asterisks
-      .replace(/\*\*/g, '.*') // ** means match any path segment(s)
-      .replace(/__STAR__/g, '[^/]*') // * means match any characters except path separator
-      .replace(/\\\?/g, '.'); // ? means match any single character
-
-    // Anchor patterns appropriately
-    if (!pattern.includes('*') && !pattern.includes('/')) {
-      // Exact name match
-      regexPattern = `(^|/)${regexPattern}(/|$)`;
-    } else if (pattern.includes('**/')) {
-      // Double star patterns
-      regexPattern = `(^|/)${regexPattern}(/|$)`;
-    }
-
-    return new RegExp(regexPattern, 'i');
+    return new RegExp(`${prefix}${regexPattern}${suffix}`, 'i');
   }
 
   /**
@@ -105,6 +108,9 @@ export class ExclusionService {
       'node_modules',
       'dist',
       'build',
+      'cache',
+      'temp',
+      'tmp',
       'out',
       'target',
       'bin',
@@ -214,12 +220,18 @@ export class ExclusionService {
     const itemLower = item.toLowerCase();
     const pathToCheck = fullPath || item;
     const normalizedPath = pathToCheck.replace(/\\/g, '/');
+    const normalizedRoot = rootPath?.replace(/\\/g, '/').replace(/\/+$/, '');
+    const rootPrefix = rootPath ? `${normalizedRoot || ''}/` : '';
+    const pathRelativeToRoot =
+      rootPrefix && normalizedPath.toLowerCase().startsWith(rootPrefix.toLowerCase())
+        ? normalizedPath.slice(rootPrefix.length)
+        : normalizedPath;
 
     // Check exact matches (case-insensitive) - for simple patterns
     if (
       excludePatterns.some(pattern => {
         // Skip glob patterns for exact match check
-        if (pattern.includes('*') || pattern.includes('/')) {
+        if (pattern.includes('*') || pattern.includes('?') || pattern.includes('/')) {
           return false;
         }
         // For exact name matching, only match complete names
@@ -231,37 +243,12 @@ export class ExclusionService {
 
     // Check wildcard and glob patterns
     for (const pattern of excludePatterns) {
-      if (pattern.includes('*') || pattern.includes('/')) {
-        try {
-          // Handle file extension patterns like *.log, *.tmp
-          if (pattern.startsWith('*.') && !pattern.includes('/')) {
-            const extension = pattern.substring(1);
-            if (item.toLowerCase().endsWith(extension.toLowerCase())) {
-              return true;
-            }
-          } else {
-            // Handle complex glob patterns
-            const regex = this.globToRegex(pattern);
-            if (regex.test(normalizedPath) || regex.test(item)) {
-              return true;
-            }
-          }
-        } catch (error) {
-          console.warn(`Invalid exclusion pattern: ${pattern}`, error);
-          continue;
+      if (pattern.includes('*') || pattern.includes('?') || pattern.includes('/')) {
+        const regex = this.globToRegex(pattern);
+        if (regex.test(pathRelativeToRoot)) {
+          return true;
         }
       }
-    }
-
-    // Check for common build/artifact patterns (exact matches)
-    if (
-      itemLower === 'build' ||
-      itemLower === 'dist' ||
-      itemLower === 'cache' ||
-      itemLower === 'temp' ||
-      itemLower === 'tmp'
-    ) {
-      return true;
     }
 
     return false;

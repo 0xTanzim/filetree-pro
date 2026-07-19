@@ -2,7 +2,7 @@
   "name": "filetree-pro",
   "displayName": "FileTree Pro",
   "description": "A powerful file tree generator for VS Code and Cursor. Generate beautiful file trees in multiple formats with smart exclusions and custom configurations.",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "publisher": "0xtanzim",
   "license": "MIT",
   "author": {
@@ -140,10 +140,10 @@
         },
         "filetree-pro.maxDepth": {
           "type": "number",
-          "default": 10,
+          "default": 15,
           "minimum": 1,
           "maximum": 99,
-          "description": "Maximum depth to scan when generating file trees. Lower values are faster for large projects. (1=shallow, 5=medium, 10=deep)"
+          "description": "Maximum depth to scan when generating file trees. Lower values are faster for large projects. (1=shallow, 5=medium, 10=deep, 15=very deep)"
         }
       }
     }

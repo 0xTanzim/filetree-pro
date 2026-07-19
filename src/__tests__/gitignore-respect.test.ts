@@ -51,6 +51,28 @@ secret.key`);
     ).toBe(false);
   });
 
+  test('should only exclude AppleDouble files for the ._* pattern', async () => {
+    const mockRootPath = '/test-project';
+    const mockContent = Buffer.from('._*\n');
+    (vscode.workspace.fs.readFile as jest.Mock).mockResolvedValue(mockContent);
+
+    await exclusionService.readGitignore(mockRootPath);
+
+    expect(
+      exclusionService.shouldExclude('._metadata', '/test-project/._metadata', mockRootPath)
+    ).toBe(true);
+    expect(
+      exclusionService.shouldExclude(
+        'index.ts',
+        '/test-project/packages/core/src/index.ts',
+        mockRootPath
+      )
+    ).toBe(false);
+    expect(
+      exclusionService.shouldExclude('package.json', '/test-project/package.json', mockRootPath)
+    ).toBe(false);
+  });
+
   test('should work without .gitignore file', async () => {
     const mockRootPath = '/test-project-no-gitignore';
 

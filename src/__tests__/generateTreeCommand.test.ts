@@ -17,14 +17,12 @@ describe('GenerateTreeCommand', () => {
   let mockExclusionService: jest.Mocked<ExclusionService>;
 
   beforeEach(() => {
-    // Create mock ExclusionService
     mockExclusionService = {
       shouldExclude: jest.fn().mockReturnValue(false),
       readGitignore: jest.fn().mockResolvedValue(['node_modules/', 'dist/']),
       dispose: jest.fn(),
     } as any;
 
-    // Create mock TreeBuilderService
     mockTreeBuilderService = {
       buildFileTreeItems: jest.fn().mockResolvedValue([
         {
@@ -42,14 +40,11 @@ describe('GenerateTreeCommand', () => {
       generateTreeLines: jest.fn().mockResolvedValue(undefined),
     } as any;
 
-    // Create command instance
     command = new GenerateTreeCommand(mockTreeBuilderService);
 
-    // Reset VS Code mocks
     jest.clearAllMocks();
   });
 
-  // Helper function to setup successful execution mocks
   const setupSuccessfulMocks = (format = 'markdown', icons = true) => {
     (vscode.window.showQuickPick as jest.Mock)
       .mockResolvedValueOnce({ label: `📄 ${format}`, value: format })
@@ -205,18 +200,21 @@ describe('GenerateTreeCommand', () => {
   });
 
   describe('Icon Preferences', () => {
-    test('should respect "With Icons" preference', async () => {
+    test('should use 15 levels when maxDepth setting is absent', async () => {
       setupSuccessfulMocks('markdown', true);
+      (vscode.workspace.getConfiguration as jest.Mock).mockReturnValue({
+        get: jest.fn((_key: string, defaultValue: unknown) => defaultValue),
+      });
       const mockUri = vscode.Uri.file('/test/project');
+
       await command.execute(mockUri);
 
-      // Verify buildFileTreeItems was called with progress callback
       expect(mockTreeBuilderService.buildFileTreeItems).toHaveBeenCalledWith(
-        expect.any(String), // rootPath
-        10, // maxDepth (default from mocked config)
-        expect.any(String), // rootPath again
-        0, // depth
-        expect.any(Function) // progressCallback
+        '/test/project',
+        15,
+        '/test/project',
+        0,
+        expect.any(Function)
       );
     });
 
@@ -319,7 +317,6 @@ describe('GenerateTreeCommand', () => {
       const mockUri = vscode.Uri.file('/test/project');
       await command.execute(mockUri);
 
-      // Should have reported progress at various stages
       expect(reportedProgress.length).toBeGreaterThan(0);
       expect(reportedProgress.some(p => p.message?.includes('Starting'))).toBe(true);
     });
@@ -391,7 +388,6 @@ describe('GenerateTreeCommand', () => {
 
       await command.executeForWorkspace();
 
-      // Should NOT prompt for folder selection (only format + icon QuickPicks)
       expect(vscode.window.showQuickPick).toHaveBeenCalledTimes(2);
       expect(mockTreeBuilderService.buildFileTreeItems).toHaveBeenCalledWith(
         '/test/workspace',
@@ -412,7 +408,11 @@ describe('GenerateTreeCommand', () => {
 
       // First QuickPick: folder selection; then format + icon selections
       (vscode.window.showQuickPick as jest.Mock)
-        .mockResolvedValueOnce({ label: 'workspace1', description: '/test/workspace1', uri: folder1Uri })
+        .mockResolvedValueOnce({
+          label: 'workspace1',
+          description: '/test/workspace1',
+          uri: folder1Uri,
+        })
         .mockResolvedValueOnce({ label: '📄 Markdown', value: 'markdown' })
         .mockResolvedValueOnce('With Icons');
 
